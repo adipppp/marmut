@@ -5,7 +5,7 @@ import {
 } from "@discordjs/voice";
 import { Guild } from "discord.js";
 
-export function clientIsPlayingMusic(guild: Guild) {
+export function clientIsPlayingAudio(guild: Guild) {
     const connection = getVoiceConnection(guild.id);
     if (!connection) {
         return false;

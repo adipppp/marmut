@@ -5,7 +5,7 @@ import {
 } from "discord.js";
 import { Command } from "../../types";
 import {
-    clientIsPlayingMusic,
+    clientIsPlayingAudio,
     memberInSameVoiceChannel,
     memberInVoiceChannel,
 } from "../../utils/functions";
@@ -28,7 +28,7 @@ export class PlayCommand implements Command {
             throw new Error("member is not a GuildMember");
         }
 
-        if (!memberInSameVoiceChannel(member) && !clientIsPlayingMusic(guild)) {
+        if (!memberInSameVoiceChannel(member) && !clientIsPlayingAudio(guild)) {
             await interaction.reply({
                 content:
                     "Bot is already playing music in another voice channel.",
