@@ -12,10 +12,7 @@ export class InteractionCreateHandler {
     async handle(interaction: BaseInteraction) {
         if (!interaction.isChatInputCommand()) return;
 
-        const command = this.commands.get(interaction.commandName);
-        if (!command) {
-            throw new Error(`Command ${interaction.commandName} not found`);
-        }
+        const command = this.commands.get(interaction.commandName)!;
 
         try {
             await command.run(interaction);
