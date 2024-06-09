@@ -2,7 +2,7 @@ import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { Command } from "../../types";
 
 export class PingCommand implements Command {
-    data: SlashCommandBuilder;
+    readonly data: SlashCommandBuilder;
 
     constructor() {
         this.data = new SlashCommandBuilder()
@@ -10,7 +10,7 @@ export class PingCommand implements Command {
             .setDescription("Replies with Pong!");
     }
 
-    async handle(interaction: ChatInputCommandInteraction) {
+    async run(interaction: ChatInputCommandInteraction) {
         try {
             await interaction.reply("Pong!");
         } catch (err) {

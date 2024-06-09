@@ -3,27 +3,36 @@ import {
     ClientOptions,
     Collection,
     Events,
+    GatewayIntentBits,
     REST,
     RESTPostAPIChatInputApplicationCommandsJSONBody,
     Routes,
 } from "discord.js";
 import fs from "fs";
 import path from "path";
-import { ClientReadyHandler, InteractionCreateHandler } from "../handlers";
-import { Command } from "../types";
+import { ClientReadyHandler, InteractionCreateHandler } from "../../handlers";
+import { Command } from "../../types";
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
-export class MarmutClient extends Client {
-    private commandsArray: RESTPostAPIChatInputApplicationCommandsJSONBody[];
-    commands: Collection<string, Command>;
+class MarmutClient extends Client {
+    private readonly commandsArray: RESTPostAPIChatInputApplicationCommandsJSONBody[];
+    readonly commands: Collection<string, Command>;
 
     constructor(options: ClientOptions) {
         super(options);
         this.commandsArray = [];
         this.commands = new Collection();
+    }
+
+    private registerListeners() {
+        this.once(Events.ClientReady, new ClientReadyHandler().handle);
+        this.on(
+            Events.InteractionCreate,
+            new InteractionCreateHandler().handle
+        );
     }
 
     private async registerCommands() {
@@ -65,7 +74,7 @@ export class MarmutClient extends Client {
     }
 
     async loadCommands() {
-        const commandPath = path.join(__dirname, "..", "commands");
+        const commandPath = path.join(process.cwd(), "dist", "commands");
         const commandFolders = fs.readdirSync(commandPath);
 
         for (const folder of commandFolders) {
@@ -85,14 +94,6 @@ export class MarmutClient extends Client {
         }
     }
 
-    private registerListeners() {
-        this.once(Events.ClientReady, new ClientReadyHandler().handle);
-        this.on(
-            Events.InteractionCreate,
-            new InteractionCreateHandler(this).handle
-        );
-    }
-
     async login(token: string) {
         await this.loadCommands();
         await this.registerCommands();
@@ -100,3 +101,7 @@ export class MarmutClient extends Client {
         return await super.login(token);
     }
 }
+
+export const marmut = new MarmutClient({
+    intents: [GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.Guilds],
+});

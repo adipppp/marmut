@@ -1,12 +1,12 @@
-import { MarmutClient } from "../core/MarmutClient";
+import { marmut } from "../core/client";
 import { Command } from "../types";
 import { BaseInteraction, Collection } from "discord.js";
 
 export class InteractionCreateHandler {
     private readonly commands: Collection<string, Command>;
 
-    constructor(client: MarmutClient) {
-        this.commands = client.commands;
+    constructor() {
+        this.commands = marmut.commands;
     }
 
     async handle(interaction: BaseInteraction) {
@@ -17,13 +17,8 @@ export class InteractionCreateHandler {
             throw new Error(`Command ${interaction.commandName} not found`);
         }
 
-        const handle = command.handle;
         try {
-            if (handle instanceof Promise) {
-                await handle(interaction);
-            } else {
-                handle(interaction);
-            }
+            await command.run(interaction);
         } catch (err) {
             console.error(err);
         }
