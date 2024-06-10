@@ -7,7 +7,9 @@ import {
 } from "discord.js";
 import { Command } from "../../types";
 import {
-    clientIsPlayingAudio,
+    clientInVoiceChannel,
+    clientIsPlaying,
+    createMusicPlayer,
     memberInSameVoiceChannel,
     memberInVoiceChannel,
 } from "../../utils/functions";
@@ -45,7 +47,7 @@ export class PlayCommand implements Command {
             return false;
         }
 
-        if (!memberInSameVoiceChannel(member) && !clientIsPlayingAudio(guild)) {
+        if (!memberInSameVoiceChannel(member) && clientIsPlaying(guild.id)) {
             await interaction.reply({
                 content:
                     "Bot is already playing a song in another voice channel.",
@@ -77,13 +79,16 @@ export class PlayCommand implements Command {
 
         await interaction.deferReply();
 
-        const member = interaction.member as GuildMember;
         const guild = interaction.guild!;
-        const channelId = member.voice.channelId!;
         const guildId = guild.id;
-        const adapterCreator = guild.voiceAdapterCreator;
 
-        joinVoiceChannel({ guildId, channelId, adapterCreator });
+        if (!clientInVoiceChannel(guild)) {
+            const member = interaction.member as GuildMember;
+            const channelId = member.voice.channelId!;
+            const adapterCreator = guild.voiceAdapterCreator;
+
+            joinVoiceChannel({ guildId, channelId, adapterCreator });
+        }
 
         const query = interaction.options.getString("query")!;
         const result = await YouTube.searchOne(query);
@@ -100,7 +105,7 @@ export class PlayCommand implements Command {
             duration: result.duration!,
         });
 
-        const player = musicPlayers.get(guildId);
+        const player = musicPlayers.get(guildId) || createMusicPlayer(guildId);
         await player.play(song);
 
         await interaction.editReply("Playing a song...");

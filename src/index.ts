@@ -1,5 +1,6 @@
 import "dotenv/config";
-import { marmut } from "./core/client";
+import { MarmutClient } from "./core/client";
+import { GatewayIntentBits } from "discord.js";
 
 const TOKEN = process.env.DISCORD_TOKEN;
 
@@ -8,7 +9,11 @@ function main() {
         throw new Error("DISCORD_TOKEN environment variable is undefined");
     }
 
+    const marmut = new MarmutClient({
+        intents: [GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.Guilds],
+    });
+
     marmut.login(TOKEN);
-};
+}
 
 main();

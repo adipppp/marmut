@@ -49,7 +49,7 @@ export class MusicPlayer {
 
     private async removeAllSongs() {
         const songIds = this.songIdArray;
-        const deletedSongs = prisma.song.deleteMany({
+        const deletedSongs = await prisma.song.deleteMany({
             where: { id: { in: songIds } },
         });
 
@@ -83,55 +83,67 @@ export class MusicPlayer {
         return player;
     }
 
-    private async fetchSong(songId: bigint) {
-        const nextSongId = this.songIdArray[++this._currentIndex];
-        const nextSong = await prisma.song.findUnique({
-            select: {
-                title: true,
-                thumbnailUrl: true,
-                videoUrl: true,
-                duration: true,
-                volume: true,
-            },
-            where: { id: nextSongId },
-        });
-        return nextSong;
-    }
-
-    private async fetchAudioStream(url: string) {
-        const info = await ytdl.getInfo(url);
-        return ytdl.downloadFromInfo(info, { quality: "highestaudio" });
-    }
-
     private async handleIdleState() {
         this._currentIndex++;
         if (this._currentIndex >= this.songIdArray.length) {
             this.removeAllSongs();
         } else {
             const nextSongId = this.songIdArray[this._currentIndex];
-            const nextSong = (await this.fetchSong(nextSongId))!;
+            const nextSong = (await prisma.song.findUnique({
+                select: {
+                    title: true,
+                    thumbnailUrl: true,
+                    videoUrl: true,
+                    duration: true,
+                    volume: true,
+                },
+                where: { id: nextSongId },
+            }))!;
             this.play(nextSong);
         }
     }
 
+    isPlaying() {
+        const player = this.getAudioPlayer();
+        return player.state.status !== AudioPlayerStatus.Idle;
+    }
+
     async play(song: Song) {
-        if (this._currentIndex === -1) {
-            const stream = await this.fetchAudioStream(song.videoUrl);
+        const player = this.getAudioPlayer();
+
+        if (player.state.status === AudioPlayerStatus.Idle) {
+            const dlChunkSize = process.env.DL_CHUNK_SIZE
+                ? 1024 * 1024 * parseInt(process.env.DL_CHUNK_SIZE)
+                : undefined;
+            const stream = ytdl(song.videoUrl, {
+                dlChunkSize,
+                filter: "audioonly",
+                quality: "highestaudio",
+            });
             const resource = createAudioResource(stream, {
                 inlineVolume: true,
             });
             resource.volume!.setVolume(song.volume / 100);
 
-            const player = this.getAudioPlayer();
+            player.on("error", (error) => {
+                console.error(error);
+                player.stop();
+            });
+
             player.on(AudioPlayerStatus.Idle, () => {
                 this.handleIdleState();
-                player.off("stateChange", this.handleIdleState);
+                player.off(AudioPlayerStatus.Idle, this.handleIdleState);
             });
 
             player.play(resource);
         }
 
         await this.addSong(song);
+    }
+
+    stop(force?: boolean) {
+        const player = this.getAudioPlayer();
+        return player.stop(force);
     }
 
     get currentIndex() {

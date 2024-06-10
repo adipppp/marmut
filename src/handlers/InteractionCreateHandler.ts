@@ -1,12 +1,11 @@
-import { marmut } from "../core/client";
 import { Command } from "../types";
 import { BaseInteraction, Collection } from "discord.js";
 
 export class InteractionCreateHandler {
     private readonly commands: Collection<string, Command>;
 
-    constructor() {
-        this.commands = marmut.commands;
+    constructor(commands: Collection<string, Command>) {
+        this.commands = commands;
     }
 
     async handle(interaction: BaseInteraction) {

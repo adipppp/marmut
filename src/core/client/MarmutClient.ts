@@ -12,12 +12,13 @@ import fs from "fs";
 import path from "path";
 import { ClientReadyHandler, InteractionCreateHandler } from "../../handlers";
 import { Command } from "../../types";
+import { VoiceStateUpdateHandler } from "../../handlers/VoiceStateUpdateHandler";
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
-class MarmutClient extends Client {
+export class MarmutClient extends Client {
     private readonly commandsArray: RESTPostAPIChatInputApplicationCommandsJSONBody[];
     readonly commands: Collection<string, Command>;
 
@@ -31,7 +32,7 @@ class MarmutClient extends Client {
         this.once(Events.ClientReady, new ClientReadyHandler().handle);
         this.on(
             Events.InteractionCreate,
-            new InteractionCreateHandler().handle
+            new InteractionCreateHandler(this.commands).handle
         );
     }
 
@@ -98,10 +99,6 @@ class MarmutClient extends Client {
         await this.loadCommands();
         await this.registerCommands();
         this.registerListeners();
-        return await super.login(token);
+        return super.login(token);
     }
 }
-
-export const marmut = new MarmutClient({
-    intents: [GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.Guilds],
-});

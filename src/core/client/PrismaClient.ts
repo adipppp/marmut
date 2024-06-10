@@ -15,3 +15,9 @@ process.on("SIGINT", async () => {
     await cleanup();
     process.exit();
 });
+
+process.on("uncaughtException", async (err) => {
+    console.error(err);
+    await cleanup();
+    process.exit(1);
+});
