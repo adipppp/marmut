@@ -34,6 +34,7 @@ export class MarmutClient extends Client {
             Events.InteractionCreate,
             new InteractionCreateHandler(this.commands).handle
         );
+        this.on(Events.VoiceStateUpdate, new VoiceStateUpdateHandler().handle);
     }
 
     private async registerCommands() {

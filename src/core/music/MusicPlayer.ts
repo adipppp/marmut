@@ -84,8 +84,7 @@ export class MusicPlayer {
     }
 
     private async handleIdleState() {
-        this._currentIndex++;
-        if (this._currentIndex >= this.songIdArray.length) {
+        if (++this._currentIndex >= this.songIdArray.length) {
             this.removeAllSongs();
         } else {
             const nextSongId = this.songIdArray[this._currentIndex];
@@ -108,6 +107,15 @@ export class MusicPlayer {
         return player.state.status !== AudioPlayerStatus.Idle;
     }
 
+    getPlayStream() {
+        const player = this.getAudioPlayer();
+        if (player.state.status !== AudioPlayerStatus.Idle) {
+            return player.state.resource.playStream;
+        } else {
+            return null;
+        }
+    }
+
     async play(song: Song) {
         const player = this.getAudioPlayer();
 
@@ -125,15 +133,21 @@ export class MusicPlayer {
             });
             resource.volume!.setVolume(song.volume / 100);
 
-            player.on("error", (error) => {
+            stream.once("error", (error) => {
                 console.error(error);
-                player.stop();
+                stream.destroy(error);
             });
 
-            player.on(AudioPlayerStatus.Idle, () => {
-                this.handleIdleState();
-                player.off(AudioPlayerStatus.Idle, this.handleIdleState);
+            player.once("error", (error) => {
+                console.error(error);
+                player.stop();
+                stream.destroy();
             });
+
+            player.once(
+                AudioPlayerStatus.Idle,
+                this.handleIdleState.bind(this)
+            );
 
             player.play(resource);
         }
