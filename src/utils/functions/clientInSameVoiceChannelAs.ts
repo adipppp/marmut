@@ -1,11 +1,11 @@
-import { clientInVoiceChannel } from "./clientInVoiceChannel";
-import { memberInVoiceChannel } from "./memberInVoiceChannel";
+import { clientInVoiceChannelOf } from "./clientInVoiceChannelOf";
+import { inVoiceChannel } from "./inVoiceChannel";
 import { GuildMember } from "discord.js";
 
-export function memberInSameVoiceChannel(member: GuildMember) {
+export function clientInSameVoiceChannelAs(member: GuildMember) {
     const guild = member.guild;
 
-    if (!memberInVoiceChannel(member) || !clientInVoiceChannel(guild)) {
+    if (!inVoiceChannel(member) || !clientInVoiceChannelOf(guild)) {
         return false;
     }
 

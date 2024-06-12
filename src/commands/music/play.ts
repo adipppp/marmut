@@ -7,11 +7,11 @@ import {
 } from "discord.js";
 import { Command } from "../../types";
 import {
-    clientInVoiceChannel,
-    clientIsPlaying,
+    clientInSameVoiceChannelAs,
+    clientInVoiceChannelOf,
+    clientIsPlayingIn,
     createMusicPlayer,
-    memberInSameVoiceChannel,
-    memberInVoiceChannel,
+    inVoiceChannel,
 } from "../../utils/functions";
 import { joinVoiceChannel } from "@discordjs/voice";
 import YouTube from "youtube-sr";
@@ -38,7 +38,7 @@ export class PlayCommand implements Command {
         const guild = interaction.guild!;
         const member = guild.members.cache.get(interaction.user.id)!;
 
-        if (!memberInVoiceChannel(member)) {
+        if (!inVoiceChannel(member)) {
             await interaction.reply({
                 content:
                     "You need to be in a voice channel to use this command.",
@@ -47,7 +47,7 @@ export class PlayCommand implements Command {
             return false;
         }
 
-        if (!memberInSameVoiceChannel(member) && clientIsPlaying(guild.id)) {
+        if (!clientInSameVoiceChannelAs(member) && clientIsPlayingIn(guild)) {
             await interaction.reply({
                 content:
                     "Bot is already playing a song in another voice channel.",
@@ -82,7 +82,7 @@ export class PlayCommand implements Command {
         const guild = interaction.guild!;
         const guildId = guild.id;
 
-        if (!clientInVoiceChannel(guild)) {
+        if (!clientInVoiceChannelOf(guild)) {
             const member = interaction.member as GuildMember;
             const channelId = member.voice.channelId!;
             const adapterCreator = guild.voiceAdapterCreator;
@@ -94,7 +94,7 @@ export class PlayCommand implements Command {
         const result = await YouTube.searchOne(query);
 
         if (!result) {
-            await interaction.editReply("Cannot find the song.");
+            await interaction.editReply("Could not find the song.");
             return;
         }
 

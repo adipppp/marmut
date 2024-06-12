@@ -3,7 +3,6 @@ import {
     ClientOptions,
     Collection,
     Events,
-    GatewayIntentBits,
     REST,
     RESTPostAPIChatInputApplicationCommandsJSONBody,
     Routes,
@@ -35,6 +34,8 @@ export class MarmutClient extends Client {
             new InteractionCreateHandler(this.commands).handle
         );
         this.on(Events.VoiceStateUpdate, new VoiceStateUpdateHandler().handle);
+        this.on("error", console.error);
+        this.on("debug", console.debug);
     }
 
     private async registerCommands() {
@@ -100,6 +101,16 @@ export class MarmutClient extends Client {
         await this.loadCommands();
         await this.registerCommands();
         this.registerListeners();
+
+        const destroy = this.destroy.bind(this);
+        process.on("beforeExit", destroy);
+        process.on("SIGINT", destroy);
+        process.on("uncaughtException", async (err) => {
+            console.error(err);
+            await destroy();
+            process.exit(1);
+        });
+
         return super.login(token);
     }
 }
