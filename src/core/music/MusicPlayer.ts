@@ -65,9 +65,7 @@ export class MusicPlayer {
             !connection ||
             connection.state.status === VoiceConnectionStatus.Destroyed
         ) {
-            throw new Error(
-                `Voice connection with guildId: ${this.guildId} doesn't exist`
-            );
+            return null;
         }
 
         let player;
@@ -104,12 +102,14 @@ export class MusicPlayer {
 
     isPlaying() {
         const player = this.getAudioPlayer();
-        return player.state.status !== AudioPlayerStatus.Idle;
+        return (
+            player !== null && player.state.status !== AudioPlayerStatus.Idle
+        );
     }
 
     getPlayStream() {
         const player = this.getAudioPlayer();
-        if (player.state.status !== AudioPlayerStatus.Idle) {
+        if (player && player.state.status !== AudioPlayerStatus.Idle) {
             return player.state.resource.playStream;
         } else {
             return null;
@@ -118,6 +118,9 @@ export class MusicPlayer {
 
     async play(song: Song) {
         const player = this.getAudioPlayer();
+        if (!player) {
+            throw new Error("Voice connection is not established.");
+        }
 
         if (player.state.status === AudioPlayerStatus.Idle) {
             const dlChunkSize = process.env.DL_CHUNK_SIZE
@@ -157,7 +160,7 @@ export class MusicPlayer {
 
     stop(force?: boolean) {
         const player = this.getAudioPlayer();
-        return player.stop(force);
+        return player !== null && player.stop(force);
     }
 
     get currentIndex() {
