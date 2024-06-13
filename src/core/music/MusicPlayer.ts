@@ -14,11 +14,13 @@ export class MusicPlayer {
     private readonly guildId: Snowflake;
     private songIdArray: bigint[];
     private _currentIndex: number;
+    private _volume: number;
 
     constructor(guildId: Snowflake) {
         this.guildId = guildId;
         this.songIdArray = [];
         this._currentIndex = -1;
+        this._volume = 50;
     }
 
     private async addSong(song: Song) {
@@ -103,7 +105,6 @@ export class MusicPlayer {
                     thumbnailUrl: true,
                     videoUrl: true,
                     duration: true,
-                    volume: true,
                 },
                 where: { id: nextSongId },
             }))!;
@@ -149,7 +150,7 @@ export class MusicPlayer {
             const resource = createAudioResource(stream, {
                 inlineVolume: true,
             });
-            resource.volume!.setVolume(song.volume / 100);
+            resource.volume!.setVolume(this._volume / 100);
 
             stream.once("error", (error) => {
                 console.error(error);
@@ -178,7 +179,21 @@ export class MusicPlayer {
         return player !== null && player.stop(force);
     }
 
+    setVolume(volume: number) {
+        this._volume = volume;
+        const player = this.getAudioPlayer();
+        if (!player || player.state.status === AudioPlayerStatus.Idle) {
+            return;
+        }
+        const resource = player.state.resource;
+        resource.volume!.setVolume(volume / 100);
+    }
+
     get currentIndex() {
         return this._currentIndex;
+    }
+
+    get volume() {
+        return this._volume;
     }
 }
