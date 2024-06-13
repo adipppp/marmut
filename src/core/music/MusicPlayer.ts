@@ -7,7 +7,7 @@ import {
 } from "@discordjs/voice";
 import { prisma } from "../client";
 import { Song } from "./Song";
-import { Snowflake } from "discord.js";
+import { Colors, EmbedBuilder, Snowflake, TextBasedChannel } from "discord.js";
 import ytdl from "@distube/ytdl-core";
 
 export class MusicPlayer {
@@ -81,7 +81,18 @@ export class MusicPlayer {
         return player;
     }
 
-    private async handleIdleState() {
+    private createEmbed(song: Song) {
+        return new EmbedBuilder()
+            .setColor(Colors.Red)
+            .setTimestamp()
+            .setThumbnail(song.thumbnailUrl)
+            .setFooter({ text: "Marmut" })
+            .setDescription(
+                `:arrow_forward:  -  Now Playing\n[${song.title}](${song.videoUrl})`
+            );
+    }
+
+    private async handleIdleState(channel: TextBasedChannel | null) {
         if (++this._currentIndex >= this.songIdArray.length) {
             this.removeAllSongs();
         } else {
@@ -96,7 +107,11 @@ export class MusicPlayer {
                 },
                 where: { id: nextSongId },
             }))!;
-            this.play(nextSong);
+
+            await this.play(nextSong, channel);
+
+            const embed = this.createEmbed(nextSong);
+            await channel?.send({ embeds: [embed] });
         }
     }
 
@@ -116,7 +131,7 @@ export class MusicPlayer {
         }
     }
 
-    async play(song: Song) {
+    async play(song: Song, channel: TextBasedChannel | null) {
         const player = this.getAudioPlayer();
         if (!player) {
             throw new Error("Voice connection is not established.");
@@ -147,10 +162,9 @@ export class MusicPlayer {
                 stream.destroy();
             });
 
-            player.once(
-                AudioPlayerStatus.Idle,
-                this.handleIdleState.bind(this)
-            );
+            player.once(AudioPlayerStatus.Idle, () => {
+                this.handleIdleState(channel);
+            });
 
             player.play(resource);
         }
