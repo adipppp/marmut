@@ -172,7 +172,8 @@ export class MusicPlayer {
         await this.addSong(song);
     }
 
-    stop(force?: boolean) {
+    async stop(force?: boolean) {
+        await this.removeAllSongs();
         const player = this.getAudioPlayer();
         return player !== null && player.stop(force);
     }

@@ -25,7 +25,7 @@ export class PlayCommand implements Command {
     constructor() {
         this.data = new SlashCommandBuilder()
             .setName("play")
-            .setDescription("Play a song")
+            .setDescription("Plays a song.")
             .addStringOption((builder) =>
                 builder
                     .setName("query")
@@ -124,9 +124,10 @@ export class PlayCommand implements Command {
         });
 
         const player = musicPlayers.get(guildId) || createMusicPlayer(guildId);
+        const embed = this.createEmbed(song, player);
+
         await player.play(song, interaction.channel);
 
-        const embed = this.createEmbed(song, player);
         await interaction.editReply({ embeds: [embed] });
     }
 }
