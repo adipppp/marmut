@@ -96,7 +96,7 @@ export class MusicPlayer {
 
     private async handleIdleState(channel: TextBasedChannel | null) {
         if (++this._currentIndex >= this.songIdArray.length) {
-            this.removeAllSongs();
+            await this.removeAllSongs();
         } else {
             const nextSongId = this.songIdArray[this._currentIndex];
             const nextSong = (await prisma.song.findUnique({
@@ -163,8 +163,8 @@ export class MusicPlayer {
                 stream.destroy();
             });
 
-            player.once(AudioPlayerStatus.Idle, () => {
-                this.handleIdleState(channel);
+            player.once(AudioPlayerStatus.Idle, async () => {
+                await this.handleIdleState(channel);
             });
 
             player.play(resource);
@@ -179,8 +179,17 @@ export class MusicPlayer {
         return player !== null && player.stop(force);
     }
 
+    skip() {
+        const player = this.getAudioPlayer();
+        if (!player) {
+            throw new Error("Voice connection is not established.");
+        }
+        player.unpause();
+        return player.stop();
+    }
+
     setVolume(volume: number) {
-        this._volume = volume;
+        this._volume = Math.trunc(volume);
         const player = this.getAudioPlayer();
         if (!player || player.state.status === AudioPlayerStatus.Idle) {
             return;
