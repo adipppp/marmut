@@ -3,11 +3,9 @@ import {
     SlashCommandOptionsOnlyBuilder,
 } from "discord.js";
 
-export type AsyncRunner = (
-    ...args: ChatInputCommandInteraction[]
-) => Promise<void>;
+export type AsyncRunner = (args: ChatInputCommandInteraction) => Promise<void>;
 
-export type Runner = (...args: ChatInputCommandInteraction[]) => void;
+export type Runner = (args: ChatInputCommandInteraction) => void;
 
 export interface Command {
     data: SlashCommandOptionsOnlyBuilder;
