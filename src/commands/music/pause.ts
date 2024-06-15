@@ -13,13 +13,13 @@ import {
 } from "../../utils/functions";
 import { musicPlayers } from "../../core/music";
 
-export class SkipCommand implements Command {
+export class PauseCommand implements Command {
     readonly data: SlashCommandOptionsOnlyBuilder;
 
     constructor() {
         this.data = new SlashCommandBuilder()
-            .setName("skip")
-            .setDescription("Skips the current song.");
+            .setName("pause")
+            .setDescription("Pauses the music player.");
     }
 
     private async validatePreconditions(
@@ -61,8 +61,7 @@ export class SkipCommand implements Command {
             return;
         }
 
-        const guild = interaction.guild!;
-        const player = musicPlayers.get(guild.id);
+        const player = musicPlayers.get(interaction.guildId!);
 
         if (!player || !player.isPlaying()) {
             await interaction.reply({
@@ -72,11 +71,19 @@ export class SkipCommand implements Command {
             return;
         }
 
-        player.skip();
+        const isPaused = player.pause();
+
+        if (!isPaused) {
+            await interaction.reply({
+                content: "Music player is already paused.",
+                ephemeral: true,
+            });
+            return;
+        }
 
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)
-            .setDescription(":fast_forward:  -  Song skipped.");
+            .setDescription(":pause_button:  -  Music player paused.");
 
         await interaction.reply({ embeds: [embed] });
     }

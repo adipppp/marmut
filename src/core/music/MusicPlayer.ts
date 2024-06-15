@@ -189,6 +189,14 @@ export class MusicPlayer {
         return player.stop();
     }
 
+    pause(interpolateSilence?: boolean) {
+        const player = this.getAudioPlayer();
+        if (!player) {
+            throw new Error("Voice connection has not been established.");
+        }
+        return player.pause(interpolateSilence);
+    }
+
     setVolume(volume: number) {
         this._volume = Math.trunc(volume);
         const player = this.getAudioPlayer();
