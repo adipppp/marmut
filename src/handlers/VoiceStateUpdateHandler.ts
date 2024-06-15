@@ -25,7 +25,7 @@ export class VoiceStateUpdateHandler implements Handler {
             return;
         }
 
-        const stream = player.getPlayStream()!;
+        const stream = player.playStream!;
         await player.stop();
         stream.destroy();
 

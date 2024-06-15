@@ -83,6 +83,23 @@ export class MusicPlayer {
         return player;
     }
 
+    private getAudioStream(url: string) {
+        const dlChunkSize = process.env.DL_CHUNK_SIZE
+            ? 1024 * 1024 * parseInt(process.env.DL_CHUNK_SIZE)
+            : undefined;
+        const stream = ytdl(url, {
+            dlChunkSize,
+            filter: "audioonly",
+            quality: "highestaudio",
+        });
+        stream.once("error", (err) => {
+            stream.destroy(err);
+            throw err;
+        });
+
+        return stream;
+    }
+
     private createEmbed(song: Song) {
         return new EmbedBuilder()
             .setColor(Colors.Red)
@@ -123,44 +140,30 @@ export class MusicPlayer {
         );
     }
 
-    getPlayStream() {
-        const player = this.getAudioPlayer();
-        if (player && player.state.status !== AudioPlayerStatus.Idle) {
-            return player.state.resource.playStream;
-        } else {
-            return null;
-        }
-    }
-
     async play(song: Song, channel: TextBasedChannel | null) {
         const player = this.getAudioPlayer();
         if (!player) {
-            throw new Error("Voice connection is not established.");
+            throw new Error("Voice connection has not been established.");
+        }
+
+        if (
+            this._currentIndex === -1 ||
+            player.state.status !== AudioPlayerStatus.Idle
+        ) {
+            await this.addSong(song);
         }
 
         if (player.state.status === AudioPlayerStatus.Idle) {
-            const dlChunkSize = process.env.DL_CHUNK_SIZE
-                ? 1024 * 1024 * parseInt(process.env.DL_CHUNK_SIZE)
-                : undefined;
-            const stream = ytdl(song.videoUrl, {
-                dlChunkSize,
-                filter: "audioonly",
-                quality: "highestaudio",
-            });
+            const stream = this.getAudioStream(song.videoUrl);
             const resource = createAudioResource(stream, {
                 inlineVolume: true,
             });
             resource.volume!.setVolume(this._volume / 100);
 
-            stream.once("error", (error) => {
-                console.error(error);
-                stream.destroy(error);
-            });
-
-            player.once("error", (error) => {
-                console.error(error);
-                player.stop();
+            player.once("error", (err) => {
+                this.stop();
                 stream.destroy();
+                throw err;
             });
 
             player.once(AudioPlayerStatus.Idle, async () => {
@@ -169,8 +172,6 @@ export class MusicPlayer {
 
             player.play(resource);
         }
-
-        await this.addSong(song);
     }
 
     async stop(force?: boolean) {
@@ -182,7 +183,7 @@ export class MusicPlayer {
     skip() {
         const player = this.getAudioPlayer();
         if (!player) {
-            throw new Error("Voice connection is not established.");
+            throw new Error("Voice connection has not been established.");
         }
         player.unpause();
         return player.stop();
@@ -200,6 +201,15 @@ export class MusicPlayer {
 
     get currentIndex() {
         return this._currentIndex;
+    }
+
+    get playStream() {
+        const player = this.getAudioPlayer();
+        if (player && player.state.status !== AudioPlayerStatus.Idle) {
+            return player.state.resource.playStream;
+        } else {
+            return null;
+        }
     }
 
     get volume() {
