@@ -10,6 +10,7 @@ import {
     inVoiceChannel,
 } from "../../utils/functions";
 import { getVoiceConnection } from "@discordjs/voice";
+import { musicPlayers } from "../../core/music";
 
 export class LeaveCommand implements Command {
     readonly data: SlashCommandOptionsOnlyBuilder;
@@ -59,8 +60,13 @@ export class LeaveCommand implements Command {
             return;
         }
 
+        const guildId = interaction.guildId!;
+
+        const player = musicPlayers.get(interaction.guildId!);
+        await player?.stop();
+
         const connection = getVoiceConnection(interaction.guildId!)!;
-        connection.disconnect();
+        connection.destroy();
 
         await interaction.reply("Disconnected from the voice channel.");
     }

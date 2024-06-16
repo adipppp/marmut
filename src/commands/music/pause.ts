@@ -83,7 +83,7 @@ export class PauseCommand implements Command {
 
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)
-            .setDescription(":pause_button:  -  Music player paused.");
+            .setDescription(":pause_button:  -  Music player paused");
 
         await interaction.reply({ embeds: [embed] });
     }

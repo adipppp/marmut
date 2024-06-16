@@ -62,13 +62,12 @@ export class MarmutClient extends Client {
         );
 
         let data: unknown[];
-
         try {
             data = (await rest.put(route, {
                 body: this.commandsArray,
             })) as unknown[];
-        } catch (error) {
-            throw error;
+        } catch (err) {
+            throw err;
         }
 
         console.log(

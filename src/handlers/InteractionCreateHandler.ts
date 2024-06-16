@@ -12,7 +12,6 @@ export class InteractionCreateHandler {
         if (!interaction.isChatInputCommand()) return;
 
         const command = this.commands.get(interaction.commandName)!;
-
         try {
             await command.run(interaction);
         } catch (err) {

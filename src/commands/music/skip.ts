@@ -76,7 +76,7 @@ export class SkipCommand implements Command {
 
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)
-            .setDescription(":fast_forward:  -  Song skipped.");
+            .setDescription(":fast_forward:  -  Song skipped");
 
         await interaction.reply({ embeds: [embed] });
     }

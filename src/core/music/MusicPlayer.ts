@@ -160,12 +160,6 @@ export class MusicPlayer {
             });
             resource.volume!.setVolume(this._volume / 100);
 
-            player.once("error", (err) => {
-                this.stop();
-                stream.destroy();
-                throw err;
-            });
-
             player.once(AudioPlayerStatus.Idle, async () => {
                 await this.handleIdleState(channel);
             });
@@ -177,7 +171,10 @@ export class MusicPlayer {
     async stop(force?: boolean) {
         await this.removeAllSongs();
         const player = this.getAudioPlayer();
-        return player !== null && player.stop(force);
+        const stream = this.playStream;
+        const retval = player !== null && player.stop(force);
+        stream?.destroy();
+        return retval;
     }
 
     skip() {
