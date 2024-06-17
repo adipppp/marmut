@@ -11,15 +11,15 @@ import {
     clientInVoiceChannelOf,
     inVoiceChannel,
 } from "../../utils/functions";
-import { musicPlayers } from "../../core/music";
+import { Song, musicPlayers } from "../../core/music";
 
-export class PauseCommand implements Command {
+export class ResumeCommand implements Command {
     readonly data: SlashCommandOptionsOnlyBuilder;
 
     constructor() {
         this.data = new SlashCommandBuilder()
-            .setName("pause")
-            .setDescription("Pauses the music player. Use /resume to unpause.");
+            .setName("resume")
+            .setDescription("Resumes the music player.");
     }
 
     private async validatePreconditions(
@@ -56,6 +56,17 @@ export class PauseCommand implements Command {
         return true;
     }
 
+    private createEmbed(song: Song) {
+        return new EmbedBuilder()
+            .setColor(Colors.Red)
+            .setTimestamp()
+            .setThumbnail(song.thumbnailUrl)
+            .setFooter({ text: "Dek Depe" })
+            .setDescription(
+                `:arrow_forward:  -  Now Playing\n[${song.title}](${song.videoUrl})`
+            );
+    }
+
     async run(interaction: ChatInputCommandInteraction) {
         if (!(await this.validatePreconditions(interaction))) {
             return;
@@ -71,17 +82,16 @@ export class PauseCommand implements Command {
             return;
         }
 
-        if (!player.pause()) {
+        if (!player.unpause()) {
             await interaction.reply({
-                content: "Music player is already paused.",
+                content: "Music player is already playing.",
                 ephemeral: true,
             });
             return;
         }
 
-        const embed = new EmbedBuilder()
-            .setColor(Colors.Red)
-            .setDescription(":pause_button:  -  Music player paused");
+        const currentSong = (await player.getCurrentSong())!;
+        const embed = this.createEmbed(currentSong);
 
         await interaction.reply({ embeds: [embed] });
     }
