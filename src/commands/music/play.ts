@@ -17,7 +17,7 @@ import {
 } from "../../utils/functions";
 import { joinVoiceChannel } from "@discordjs/voice";
 import YouTube from "youtube-sr";
-import { MusicPlayer, Song, musicPlayers } from "../../core/music";
+import { Song, musicPlayers } from "../../core/music";
 
 export class PlayCommand implements Command {
     readonly data: SlashCommandOptionsOnlyBuilder;
@@ -74,9 +74,9 @@ export class PlayCommand implements Command {
         return true;
     }
 
-    private createEmbed(song: Song, player: MusicPlayer) {
+    private createEmbed(song: Song, currentIndex: number) {
         let description;
-        if (player.currentIndex === -1) {
+        if (currentIndex === -1) {
             description = `:arrow_forward:  -  Now Playing\n[${song.title}](${song.videoUrl})`;
         } else {
             description = `:white_check_mark:  -  Added to queue\n[${song.title}](${song.videoUrl})`;
@@ -124,10 +124,11 @@ export class PlayCommand implements Command {
         });
 
         const player = musicPlayers.get(guildId) ?? createMusicPlayer(guildId);
-        const embed = this.createEmbed(song, player);
+        const currentIndex = player.getCurrentIndex();
 
         await player.play(song, interaction.channel);
 
+        const embed = this.createEmbed(song, currentIndex);
         await interaction.editReply({ embeds: [embed] });
     }
 }

@@ -72,7 +72,7 @@ export class VolumeCommand implements Command {
         const guildId = guild.id;
         const player = musicPlayers.get(guildId) ?? createMusicPlayer(guildId);
 
-        const currentVolume = player.volume;
+        const currentVolume = player.getVolume();
         const newVolume = interaction.options.getInteger("volume");
 
         if (newVolume === null) {

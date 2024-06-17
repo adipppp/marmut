@@ -63,7 +63,7 @@ export class PauseCommand implements Command {
 
         const player = musicPlayers.get(interaction.guildId!);
 
-        if (!player || !player.isPlaying()) {
+        if (!player || player.isIdle()) {
             await interaction.reply({
                 content: "There is no song playing.",
                 ephemeral: true,
@@ -71,9 +71,7 @@ export class PauseCommand implements Command {
             return;
         }
 
-        const isPaused = player.pause();
-
-        if (!isPaused) {
+        if (!player.pause()) {
             await interaction.reply({
                 content: "Music player is already paused.",
                 ephemeral: true,

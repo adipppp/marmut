@@ -70,17 +70,17 @@ export class MusicPlayer {
             return null;
         }
 
-        let player;
+        let audioPlayer;
         let subscription = connection.state.subscription;
 
         if (subscription) {
-            player = subscription.player;
+            audioPlayer = subscription.player;
         } else {
-            player = createAudioPlayer();
-            connection.subscribe(player);
+            audioPlayer = createAudioPlayer();
+            connection.subscribe(audioPlayer);
         }
 
-        return player;
+        return audioPlayer;
     }
 
     private getAudioStream(url: string) {
@@ -133,91 +133,111 @@ export class MusicPlayer {
         }
     }
 
-    isPlaying() {
-        const player = this.getAudioPlayer();
-        return (
-            player !== null && player.state.status !== AudioPlayerStatus.Idle
-        );
+    isIdle() {
+        const audioPlayer = this.getAudioPlayer();
+        if (!audioPlayer) {
+            throw new Error("Voice connection has not been established.");
+        }
+        return audioPlayer.state.status === AudioPlayerStatus.Idle;
     }
 
     async play(song: Song, channel: TextBasedChannel | null) {
-        const player = this.getAudioPlayer();
-        if (!player) {
+        const audioPlayer = this.getAudioPlayer();
+        if (!audioPlayer) {
             throw new Error("Voice connection has not been established.");
         }
 
         if (
             this._currentIndex === -1 ||
-            player.state.status !== AudioPlayerStatus.Idle
+            audioPlayer.state.status !== AudioPlayerStatus.Idle
         ) {
             await this.addSong(song);
         }
 
-        if (player.state.status === AudioPlayerStatus.Idle) {
+        if (audioPlayer.state.status === AudioPlayerStatus.Idle) {
             const stream = this.getAudioStream(song.videoUrl);
             const resource = createAudioResource(stream, {
                 inlineVolume: true,
             });
             resource.volume!.setVolume(this._volume / 100);
 
-            player.once(AudioPlayerStatus.Idle, async () => {
+            audioPlayer.once(AudioPlayerStatus.Idle, async () => {
                 await this.handleIdleState(channel);
             });
 
-            player.play(resource);
+            audioPlayer.play(resource);
         }
     }
 
     async stop(force?: boolean) {
         await this.removeAllSongs();
-        const player = this.getAudioPlayer();
-        const stream = this.playStream;
-        const retval = player !== null && player.stop(force);
+        const audioPlayer = this.getAudioPlayer();
+        const stream = this.getPlayStream();
+        const retval = audioPlayer !== null && audioPlayer.stop(force);
         stream?.destroy();
         return retval;
     }
 
     skip() {
-        const player = this.getAudioPlayer();
-        if (!player) {
+        const audioPlayer = this.getAudioPlayer();
+        if (!audioPlayer) {
             throw new Error("Voice connection has not been established.");
         }
-        player.unpause();
-        return player.stop();
+        audioPlayer.unpause();
+        return audioPlayer.stop();
     }
 
     pause(interpolateSilence?: boolean) {
-        const player = this.getAudioPlayer();
-        if (!player) {
+        const audioPlayer = this.getAudioPlayer();
+        if (!audioPlayer) {
             throw new Error("Voice connection has not been established.");
         }
-        return player.pause(interpolateSilence);
+        return audioPlayer.pause(interpolateSilence);
+    }
+
+    unpause() {
+        const audioPlayer = this.getAudioPlayer();
+        if (!audioPlayer) {
+            throw new Error("Voice connection has not been established.");
+        }
+        return audioPlayer.unpause();
+    }
+
+    getVolume() {
+        return this._volume;
     }
 
     setVolume(volume: number) {
         this._volume = Math.trunc(volume);
-        const player = this.getAudioPlayer();
-        if (!player || player.state.status === AudioPlayerStatus.Idle) {
+        const audioPlayer = this.getAudioPlayer();
+        if (
+            !audioPlayer ||
+            audioPlayer.state.status === AudioPlayerStatus.Idle
+        ) {
             return;
         }
-        const resource = player.state.resource;
+        const resource = audioPlayer.state.resource;
         resource.volume!.setVolume(volume / 100);
     }
 
-    get currentIndex() {
+    getCurrentIndex() {
         return this._currentIndex;
     }
 
-    get playStream() {
-        const player = this.getAudioPlayer();
-        if (player && player.state.status !== AudioPlayerStatus.Idle) {
-            return player.state.resource.playStream;
+    async getCurrentSong() {
+        const songId = this.songIdArray[this._currentIndex];
+        return prisma.song.findUnique({ where: { id: songId } });
+    }
+
+    getPlayStream() {
+        const audioPlayer = this.getAudioPlayer();
+        if (
+            audioPlayer &&
+            audioPlayer.state.status !== AudioPlayerStatus.Idle
+        ) {
+            return audioPlayer.state.resource.playStream;
         } else {
             return null;
         }
-    }
-
-    get volume() {
-        return this._volume;
     }
 }
