@@ -1,5 +1,7 @@
 import {
     ChatInputCommandInteraction,
+    Colors,
+    EmbedBuilder,
     SlashCommandBuilder,
     SlashCommandOptionsOnlyBuilder,
 } from "discord.js";
@@ -9,16 +11,17 @@ import {
     clientInVoiceChannelOf,
     inVoiceChannel,
 } from "../../utils/functions";
-import { getVoiceConnection } from "@discordjs/voice";
 import { musicPlayers } from "../../core/music";
 
-export class LeaveCommand implements Command {
+export class StopCommand implements Command {
     readonly data: SlashCommandOptionsOnlyBuilder;
 
     constructor() {
         this.data = new SlashCommandBuilder()
-            .setName("leave")
-            .setDescription("Disconnects from the voice channel.");
+            .setName("stop")
+            .setDescription(
+                "Stops the music player and clears the song queue."
+            );
     }
 
     private async validatePreconditions(
@@ -38,7 +41,7 @@ export class LeaveCommand implements Command {
 
         if (!clientInVoiceChannelOf(guild)) {
             await interaction.reply({
-                content: "Bot is already disconnected from voice channels.",
+                content: "Bot is not connected to any voice channel.",
                 ephemeral: true,
             });
             return false;
@@ -63,9 +66,10 @@ export class LeaveCommand implements Command {
         const player = musicPlayers.get(interaction.guildId!);
         await player?.stop();
 
-        const connection = getVoiceConnection(interaction.guildId!)!;
-        connection.destroy();
-
-        await interaction.reply("Disconnected from the voice channel.");
+        const embed = new EmbedBuilder()
+            .setColor(Colors.Red)
+            .setDescription(":stop_button:  -  Music stopped.");
+            
+        await interaction.reply({ embeds: [embed] });
     }
 }
