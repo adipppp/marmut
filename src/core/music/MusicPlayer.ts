@@ -84,9 +84,10 @@ export class MusicPlayer {
     }
 
     private getAudioStream(url: string) {
-        const dlChunkSize = process.env.DL_CHUNK_SIZE
-            ? 1024 * 1024 * parseInt(process.env.DL_CHUNK_SIZE)
-            : undefined;
+        const dlChunkSize =
+            process.env.DL_CHUNK_SIZE !== undefined
+                ? 1024 * 1024 * parseInt(process.env.DL_CHUNK_SIZE)
+                : undefined;
         const stream = ytdl(url, {
             dlChunkSize,
             filter: "audioonly",
