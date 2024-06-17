@@ -4,7 +4,6 @@ import {
     Collection,
     Events,
     REST,
-    RESTPostAPIChatInputApplicationCommandsJSONBody,
     Routes,
 } from "discord.js";
 import fs from "fs";
@@ -18,12 +17,10 @@ const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
 export class MarmutClient extends Client {
-    private readonly commandsArray: RESTPostAPIChatInputApplicationCommandsJSONBody[];
     readonly commands: Collection<string, Command>;
 
     constructor(options: ClientOptions) {
         super(options);
-        this.commandsArray = [];
         this.commands = new Collection();
     }
 
@@ -46,7 +43,7 @@ export class MarmutClient extends Client {
             throw new Error("CLIENT_ID environment variable is undefined");
         }
 
-        const commands = this.commands;
+        const commandsArray = this.commands.map((value) => value.data.toJSON());
         const rest = new REST().setToken(TOKEN);
 
         let route;
@@ -57,22 +54,7 @@ export class MarmutClient extends Client {
             route = Routes.applicationCommands(CLIENT_ID);
         }
 
-        console.log(
-            `Started refreshing ${commands.size} application (/) commands.`
-        );
-
-        let data: unknown[];
-        try {
-            data = (await rest.put(route, {
-                body: this.commandsArray,
-            })) as unknown[];
-        } catch (err) {
-            throw err;
-        }
-
-        console.log(
-            `Successfully reloaded ${data.length} application (/) commands.`
-        );
+        await rest.put(route, { body: commandsArray });
     }
 
     async loadCommands() {
@@ -89,9 +71,7 @@ export class MarmutClient extends Client {
                     path.join(commandPath, folder, file)
                 );
                 const instance = new command[Object.keys(command)[0]]();
-
                 this.commands.set(instance.data.name, instance);
-                this.commandsArray.push(instance.data.toJSON());
             }
         }
     }
