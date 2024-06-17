@@ -123,7 +123,7 @@ export class PlayCommand implements Command {
             duration: result.duration!,
         });
 
-        const player = musicPlayers.get(guildId) || createMusicPlayer(guildId);
+        const player = musicPlayers.get(guildId) ?? createMusicPlayer(guildId);
         const embed = this.createEmbed(song, player);
 
         await player.play(song, interaction.channel);

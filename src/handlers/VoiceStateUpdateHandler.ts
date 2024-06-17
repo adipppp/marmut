@@ -7,7 +7,6 @@ export class VoiceStateUpdateHandler implements Handler {
     async handle(oldState: VoiceState, newState: VoiceState) {
         const clientId = oldState.client.user.id;
         const guildId = oldState.guild.id;
-        const connection = getVoiceConnection(guildId);
 
         if (oldState.id !== clientId || newState.channelId) {
             return;
@@ -18,6 +17,7 @@ export class VoiceStateUpdateHandler implements Handler {
 
         musicPlayers.delete(guildId);
 
+        const connection = getVoiceConnection(guildId);
         connection?.destroy();
     }
 }
