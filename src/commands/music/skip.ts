@@ -19,7 +19,8 @@ export class SkipCommand implements Command {
     constructor() {
         this.data = new SlashCommandBuilder()
             .setName("skip")
-            .setDescription("Skips the current song.");
+            .setDescription("Skips the current song.")
+            .setDMPermission(false);
     }
 
     private async validatePreconditions(

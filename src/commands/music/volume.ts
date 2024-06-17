@@ -26,7 +26,8 @@ export class VolumeCommand implements Command {
                     .setName("volume")
                     .setDescription("The volume to set.")
                     .setRequired(false)
-            );
+            )
+            .setDMPermission(false);
     }
 
     private async validatePreconditions(

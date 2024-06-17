@@ -19,9 +19,8 @@ export class StopCommand implements Command {
     constructor() {
         this.data = new SlashCommandBuilder()
             .setName("stop")
-            .setDescription(
-                "Stops the music player and clears the song queue."
-            );
+            .setDescription("Stops the music player and clears the song queue.")
+            .setDMPermission(false);
     }
 
     private async validatePreconditions(
@@ -69,7 +68,7 @@ export class StopCommand implements Command {
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)
             .setDescription(":stop_button:  -  Music stopped.");
-            
+
         await interaction.reply({ embeds: [embed] });
     }
 }

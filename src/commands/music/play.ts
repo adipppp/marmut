@@ -31,7 +31,8 @@ export class PlayCommand implements Command {
                     .setName("query")
                     .setDescription("The song to play. Can also be a URL.")
                     .setRequired(true)
-            );
+            )
+            .setDMPermission(false);
     }
 
     private async validatePreconditions(

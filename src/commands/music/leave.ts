@@ -18,7 +18,8 @@ export class LeaveCommand implements Command {
     constructor() {
         this.data = new SlashCommandBuilder()
             .setName("leave")
-            .setDescription("Disconnects from the voice channel.");
+            .setDescription("Disconnects from the voice channel.")
+            .setDMPermission(false);
     }
 
     private async validatePreconditions(

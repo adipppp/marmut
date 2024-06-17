@@ -19,7 +19,8 @@ export class PauseCommand implements Command {
     constructor() {
         this.data = new SlashCommandBuilder()
             .setName("pause")
-            .setDescription("Pauses the music player. Use /resume to unpause.");
+            .setDescription("Pauses the music player. Use /resume to unpause.")
+            .setDMPermission(false);
     }
 
     private async validatePreconditions(

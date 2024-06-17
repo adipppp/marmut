@@ -19,7 +19,8 @@ export class ResumeCommand implements Command {
     constructor() {
         this.data = new SlashCommandBuilder()
             .setName("resume")
-            .setDescription("Resumes the music player.");
+            .setDescription("Resumes the music player.")
+            .setDMPermission(false);
     }
 
     private async validatePreconditions(
