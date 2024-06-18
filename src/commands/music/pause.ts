@@ -2,6 +2,7 @@ import {
     ChatInputCommandInteraction,
     Colors,
     EmbedBuilder,
+    GuildMember,
     SlashCommandBuilder,
     SlashCommandOptionsOnlyBuilder,
 } from "discord.js";
@@ -27,7 +28,7 @@ export class PauseCommand implements Command {
         interaction: ChatInputCommandInteraction
     ) {
         const guild = interaction.guild!;
-        const member = guild.members.cache.get(interaction.user.id)!;
+        const member = interaction.member as GuildMember;
 
         if (!inVoiceChannel(member)) {
             await interaction.reply({
