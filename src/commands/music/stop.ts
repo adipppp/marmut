@@ -68,7 +68,7 @@ export class StopCommand implements Command {
 
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)
-            .setDescription(":stop_button:  -  Music stopped.");
+            .setDescription(":stop_button:  -  Music player stopped.");
 
         await interaction.reply({ embeds: [embed] });
     }

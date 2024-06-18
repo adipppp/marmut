@@ -74,8 +74,7 @@ export class JoinCommand implements Command {
 
         if (!clientInSameVoiceChannelAs(member) && clientIsPlayingIn(guild)) {
             await interaction.reply({
-                content:
-                    "Bot is already playing a song in another voice channel.",
+                content: "You need to be in the same voice channel as the bot.",
                 ephemeral: true,
             });
             return false;
