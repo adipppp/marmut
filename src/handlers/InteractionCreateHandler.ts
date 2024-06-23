@@ -1,7 +1,7 @@
-import { Command } from "../types";
+import { Command, Handler } from "../types";
 import { BaseInteraction, Collection } from "discord.js";
 
-export class InteractionCreateHandler {
+export class InteractionCreateHandler implements Handler {
     private readonly commands: Collection<string, Command>;
 
     constructor(commands: Collection<string, Command>) {

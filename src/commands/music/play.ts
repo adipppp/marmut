@@ -10,13 +10,12 @@ import {
 import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
-    clientInVoiceChannelOf,
     clientIsPlayingIn,
     createMusicPlayer,
     inVoiceChannel,
 } from "../../utils/functions";
 import { joinVoiceChannel } from "@discordjs/voice";
-import YouTube from "youtube-sr";
+import YouTube, { Video } from "youtube-sr";
 import { Song, musicPlayers } from "../../core/music";
 
 export class PlayCommand implements Command {
@@ -29,7 +28,9 @@ export class PlayCommand implements Command {
             .addStringOption((builder) =>
                 builder
                     .setName("query")
-                    .setDescription("The song to play. Can also be a URL.")
+                    .setDescription(
+                        "The song to play. Can also be a YouTube video URL."
+                    )
                     .setRequired(true)
             )
             .setDMPermission(false);
@@ -74,6 +75,24 @@ export class PlayCommand implements Command {
         return true;
     }
 
+    private joinVoiceChannel(channel: VoiceBasedChannel) {
+        const guild = channel.guild;
+        const guildId = guild.id;
+        const channelId = channel.id;
+        const adapterCreator = guild.voiceAdapterCreator;
+
+        joinVoiceChannel({ guildId, channelId, adapterCreator });
+    }
+
+    private createSong(video: Video) {
+        return new Song({
+            title: video.title!,
+            thumbnailUrl: video.thumbnail!.url!,
+            videoUrl: video.url,
+            duration: video.duration!,
+        });
+    }
+
     private createEmbed(song: Song, currentIndex: number) {
         let description;
         if (currentIndex === -1) {
@@ -99,13 +118,10 @@ export class PlayCommand implements Command {
 
         const guild = interaction.guild!;
         const guildId = guild.id;
+        const member = interaction.member as GuildMember;
 
-        if (!clientInVoiceChannelOf(guild)) {
-            const member = interaction.member as GuildMember;
-            const channelId = member.voice.channelId!;
-            const adapterCreator = guild.voiceAdapterCreator;
-
-            joinVoiceChannel({ guildId, channelId, adapterCreator });
+        if (!clientInSameVoiceChannelAs(member) && !clientIsPlayingIn(guild)) {
+            this.joinVoiceChannel(member.voice.channel!);
         }
 
         const query = interaction.options.getString("query")!;
@@ -116,14 +132,8 @@ export class PlayCommand implements Command {
             return;
         }
 
-        const song = new Song({
-            title: result.title!,
-            thumbnailUrl: result.thumbnail!.url!,
-            videoUrl: result.url,
-            duration: result.duration!,
-        });
-
         const player = musicPlayers.get(guildId) ?? createMusicPlayer(guildId);
+        const song = this.createSong(result);
         const currentIndex = player.getCurrentIndex();
 
         await player.play(song, interaction.channel);
