@@ -64,7 +64,7 @@ export class QueueCommand implements Command {
                 content: "There is no song playing.",
                 ephemeral: true,
             });
-            return;
+            return false;
         }
 
         return true;
