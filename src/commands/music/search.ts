@@ -211,8 +211,6 @@ export class SearchCommand implements Command {
         interaction: ButtonInteraction,
         songs: Song[]
     ) {
-        await interaction.deferUpdate();
-
         const guild = interaction.guild!;
         const guildId = guild.id;
         const member = interaction.member as GuildMember;
@@ -227,8 +225,9 @@ export class SearchCommand implements Command {
         const currentIndex = player.getCurrentIndex();
         const embed = this.createPlayingEmbed(song, currentIndex);
 
+        await interaction.deferReply();
         await player.play(song, interaction.channel);
-        await interaction.channel?.send({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
     }
 
     async run(interaction: ChatInputCommandInteraction) {

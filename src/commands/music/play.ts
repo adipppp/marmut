@@ -27,7 +27,7 @@ export class PlayCommand implements Command {
             .setDescription("Plays a song.")
             .addStringOption((builder) =>
                 builder
-                    .setName("query")
+                    .setName("song")
                     .setDescription(
                         "The song to play. Can also be a YouTube video URL."
                     )
