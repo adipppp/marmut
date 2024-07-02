@@ -173,7 +173,7 @@ export class MusicPlayer {
     async stop(force?: boolean) {
         await this.removeAllSongs();
         const audioPlayer = this.getAudioPlayer();
-        const stream = this.getPlayStream();
+        const stream = this.getAudioResource()?.playStream;
         const retval = audioPlayer !== null && audioPlayer.stop(force);
         stream?.destroy();
         return retval;
@@ -227,18 +227,30 @@ export class MusicPlayer {
 
     async getCurrentSong() {
         const songId = this.songIdArray[this._currentIndex];
-        return prisma.song.findUnique({ where: { id: songId } });
+        return await prisma.song.findUnique({ where: { id: songId } });
     }
 
-    getPlayStream() {
+    getAudioResource() {
         const audioPlayer = this.getAudioPlayer();
         if (
             audioPlayer &&
             audioPlayer.state.status !== AudioPlayerStatus.Idle
         ) {
-            return audioPlayer.state.resource.playStream;
+            return audioPlayer.state.resource;
         } else {
             return null;
         }
+    }
+
+    async getQueue() {
+        return await prisma.song.findMany({
+            select: {
+                title: true,
+                thumbnailUrl: true,
+                videoUrl: true,
+                duration: true,
+            },
+            where: { id: { in: this.songIdArray } },
+        });
     }
 }
