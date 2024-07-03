@@ -79,8 +79,8 @@ export class MusicPlayer {
             quality: "highestaudio",
         });
         stream.once("error", (err) => {
-            stream.destroy(err);
-            throw err;
+            console.error(err);
+            stream.destroy();
         });
 
         return stream;
@@ -195,8 +195,10 @@ export class MusicPlayer {
             where: { id: songId },
         });
 
-        if (this._currentIndex === index) {
-            this.skip();
+        if (this._currentIndex >= index) {
+            if (this._currentIndex === index) {
+                this.skip();
+            }
             this._currentIndex--;
         }
 
