@@ -4,8 +4,8 @@
   "description": "Mari Mutar Musik 🐹🎧",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
-    "clean": "rimraf dist",
+    "build": "npx tsc",
+    "clean": "npx rimraf dist",
     "dev": "node dist/index.js",
     "start": "npm run clean && npm run build && npm run dev",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -24,7 +24,7 @@
     "@discordjs/opus": "^0.9.0",
     "@discordjs/voice": "^0.17.0",
     "@distube/ytdl-core": "^4.13.4",
-    "@prisma/client": "^5.15.0",
+    "@prisma/client": "^5.16.1",
     "discord.js": "^14.15.3",
     "dotenv": "^16.4.5",
     "ffmpeg-static": "^5.2.0",
@@ -32,11 +32,11 @@
     "youtube-sr": "^4.3.11"
   },
   "devDependencies": {
-    "@types/node": "^20.14.2",
+    "@types/node": "^20.14.9",
     "@types/tough-cookie": "^4.0.5",
-    "prisma": "^5.15.0",
+    "prisma": "^5.16.1",
     "rimraf": "^5.0.7",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.5"
+    "typescript": "^5.5.3"
   }
 }
