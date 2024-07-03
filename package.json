@@ -2,7 +2,7 @@
   "name": "marmut",
   "version": "1.0.0",
   "description": "Mari Mutar Musik 🐹🎧",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "build": "npx tsc",
     "clean": "npx rimraf dist",
