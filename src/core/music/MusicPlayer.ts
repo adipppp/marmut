@@ -34,21 +34,6 @@ export class MusicPlayer {
         return createdSong;
     }
 
-    private async removeSong(index: number) {
-        const songId = this.songIdArray[index];
-        const deletedSong = await prisma.song.delete({
-            where: { id: songId },
-        });
-
-        this.songIdArray.splice(index, 1);
-
-        if (this.songIdArray.length <= index) {
-            this._currentIndex = -1;
-        }
-
-        return deletedSong;
-    }
-
     private async removeAllSongs() {
         const songIds = this.songIdArray;
         const deletedSongs = await prisma.song.deleteMany({
@@ -202,6 +187,22 @@ export class MusicPlayer {
             throw new Error("Voice connection has not been established.");
         }
         return audioPlayer.unpause();
+    }
+
+    async removeSong(index: number) {
+        const songId = this.songIdArray[index];
+        const deletedSong = await prisma.song.delete({
+            where: { id: songId },
+        });
+
+        if (this._currentIndex === index) {
+            this.skip();
+            this._currentIndex--;
+        }
+
+        this.songIdArray.splice(index, 1);
+
+        return deletedSong;
     }
 
     getVolume() {
