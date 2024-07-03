@@ -22,7 +22,8 @@ export class QueueCommand implements Command {
     constructor() {
         this.data = new SlashCommandBuilder()
             .setName("queue")
-            .setDescription("Displays the current song queue.");
+            .setDescription("Displays the current song queue.")
+            .setDMPermission(false);
     }
 
     private async validatePreconditions(
@@ -51,17 +52,6 @@ export class QueueCommand implements Command {
         if (!clientInSameVoiceChannelAs(member)) {
             await interaction.reply({
                 content: "You need to be in the same voice channel as the bot.",
-                ephemeral: true,
-            });
-            return false;
-        }
-
-        const guildId = guild.id;
-        const player = musicPlayers.get(guildId) ?? createMusicPlayer(guildId);
-
-        if (!player || player.isIdle()) {
-            await interaction.reply({
-                content: "There is no song playing.",
                 ephemeral: true,
             });
             return false;
@@ -105,19 +95,27 @@ export class QueueCommand implements Command {
             return;
         }
 
-        await interaction.deferReply();
+        const guildId = interaction.guildId!;
+        const player = musicPlayers.get(guildId) ?? createMusicPlayer(guildId);
 
-        const player = musicPlayers.get(interaction.guildId!)!;
+        if (!player || player.isIdle()) {
+            await interaction.reply({
+                content: "There is no song playing.",
+                ephemeral: true,
+            });
+            return;
+        }
+
         const view = new QueueView(player);
         const actionRow = await view.getActionRow();
         const embed = await view.getEmbed();
 
         if (actionRow.components.length === 0) {
-            await interaction.editReply({ embeds: [embed] });
+            await interaction.reply({ embeds: [embed] });
             return;
         }
 
-        const message = await interaction.editReply({
+        const message = await interaction.reply({
             components: [actionRow],
             embeds: [embed],
         });

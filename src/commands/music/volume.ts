@@ -22,13 +22,13 @@ export class VolumeCommand implements Command {
         this.data = new SlashCommandBuilder()
             .setName("volume")
             .setDescription("Changes the volume of the music player.")
+            .setDMPermission(false)
             .addIntegerOption((builder) =>
                 builder
                     .setName("volume")
                     .setDescription("The volume to set.")
                     .setRequired(false)
-            )
-            .setDMPermission(false);
+            );
     }
 
     private async validatePreconditions(

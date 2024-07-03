@@ -45,13 +45,13 @@ export class SearchCommand implements Command {
             .setDescription(
                 "Searches for songs to play. The menu only lasts for 60 seconds though, so be quick."
             )
+            .setDMPermission(false)
             .addStringOption((builder) =>
                 builder
                     .setName("query")
                     .setDescription("Something to search.")
                     .setRequired(true)
-            )
-            .setDMPermission(false);
+            );
     }
 
     private async validatePreconditions(
@@ -244,7 +244,7 @@ export class SearchCommand implements Command {
             this.joinVoiceChannel(member.voice.channel!);
         }
 
-        const query = interaction.options.getString("query")!;
+        const query = interaction.options.getString("query", true);
         const results = await YouTube.search(query, {
             limit: 10,
             type: "video",
@@ -281,7 +281,7 @@ export class SearchCommand implements Command {
             await this.handleValidInteraction(interaction, songs);
 
             rows = this.updateActionRowsWithDisabledButtons(rows);
-            await message.edit({ components: rows });
+            await interaction.message.edit({ components: rows });
         });
     }
 }

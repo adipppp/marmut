@@ -20,6 +20,7 @@ export class JoinCommand implements Command {
         this.data = new SlashCommandBuilder()
             .setName("join")
             .setDescription("Connects to a voice channel.")
+            .setDMPermission(false)
             .addChannelOption((builder) =>
                 builder
                     .setName("channel")
@@ -27,8 +28,7 @@ export class JoinCommand implements Command {
                         "The voice channel to connect to. Defaults to your current voice channel."
                     )
                     .setRequired(false)
-            )
-            .setDMPermission(false);
+            );
     }
 
     private async validateArgs(interaction: ChatInputCommandInteraction) {

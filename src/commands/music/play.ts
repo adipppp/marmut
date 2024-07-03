@@ -25,6 +25,7 @@ export class PlayCommand implements Command {
         this.data = new SlashCommandBuilder()
             .setName("play")
             .setDescription("Plays a song.")
+            .setDMPermission(false)
             .addStringOption((builder) =>
                 builder
                     .setName("song")
@@ -32,8 +33,7 @@ export class PlayCommand implements Command {
                         "The song to play. Can also be a YouTube video URL."
                     )
                     .setRequired(true)
-            )
-            .setDMPermission(false);
+            );
     }
 
     private async validatePreconditions(
@@ -124,7 +124,7 @@ export class PlayCommand implements Command {
             this.joinVoiceChannel(member.voice.channel!);
         }
 
-        const query = interaction.options.getString("query")!;
+        const query = interaction.options.getString("query", true);
         const result = await YouTube.searchOne(query);
 
         if (!result) {
