@@ -125,7 +125,7 @@ export class QueueView {
         let value = "";
 
         for (let i = 0; i < songs.length; i++) {
-            value += `[${i + lowerIndex + 1}. ${songs[i].title}](${
+            value += `${i + lowerIndex + 1}. [${songs[i].title}](${
                 songs[i].videoUrl
             })`;
             if (i < songs.length - 1) {
