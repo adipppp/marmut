@@ -7,8 +7,8 @@ import {
     Colors,
     EmbedBuilder,
     GuildMember,
+    SharedSlashCommand,
     SlashCommandBuilder,
-    SlashCommandOptionsOnlyBuilder,
     Snowflake,
     VoiceBasedChannel,
 } from "discord.js";
@@ -37,14 +37,12 @@ const NUMBER_EMOJIS = [
 ];
 
 export class SearchCommand implements Command {
-    readonly data: SlashCommandOptionsOnlyBuilder;
+    readonly data: SharedSlashCommand;
 
     constructor() {
         this.data = new SlashCommandBuilder()
             .setName("search")
-            .setDescription(
-                "Searches for songs to play. The menu only lasts for 60 seconds though, so be quick."
-            )
+            .setDescription("Searches for songs to play.")
             .setDMPermission(false)
             .addStringOption((builder) =>
                 builder

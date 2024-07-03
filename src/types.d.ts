@@ -1,14 +1,11 @@
-import {
-    ChatInputCommandInteraction,
-    SlashCommandOptionsOnlyBuilder,
-} from "discord.js";
+import { ChatInputCommandInteraction, SharedSlashCommand } from "discord.js";
 
 export type AsyncRunner = (args: ChatInputCommandInteraction) => Promise<void>;
 
 export type Runner = (args: ChatInputCommandInteraction) => void;
 
 export interface Command {
-    data: SlashCommandOptionsOnlyBuilder;
+    data: SharedSlashCommand;
     run: Runner | AsyncRunner;
 }
 

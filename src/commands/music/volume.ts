@@ -3,8 +3,8 @@ import {
     Colors,
     EmbedBuilder,
     GuildMember,
+    SharedSlashCommand,
     SlashCommandBuilder,
-    SlashCommandOptionsOnlyBuilder,
 } from "discord.js";
 import { Command } from "../../types";
 import {
@@ -16,7 +16,7 @@ import {
 import { musicPlayers } from "../../core/music";
 
 export class VolumeCommand implements Command {
-    readonly data: SlashCommandOptionsOnlyBuilder;
+    readonly data: SharedSlashCommand;
 
     constructor() {
         this.data = new SlashCommandBuilder()

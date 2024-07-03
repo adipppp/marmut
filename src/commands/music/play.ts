@@ -3,8 +3,8 @@ import {
     Colors,
     EmbedBuilder,
     GuildMember,
+    SharedSlashCommand,
     SlashCommandBuilder,
-    SlashCommandOptionsOnlyBuilder,
     VoiceBasedChannel,
 } from "discord.js";
 import { Command } from "../../types";
@@ -19,7 +19,7 @@ import YouTube, { Video } from "youtube-sr";
 import { Song, musicPlayers } from "../../core/music";
 
 export class PlayCommand implements Command {
-    readonly data: SlashCommandOptionsOnlyBuilder;
+    readonly data: SharedSlashCommand;
 
     constructor() {
         this.data = new SlashCommandBuilder()

@@ -1,8 +1,12 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import {
+    ChatInputCommandInteraction,
+    SharedSlashCommand,
+    SlashCommandBuilder,
+} from "discord.js";
 import { Command } from "../../types";
 
 export class PingCommand implements Command {
-    readonly data: SlashCommandBuilder;
+    readonly data: SharedSlashCommand;
 
     constructor() {
         this.data = new SlashCommandBuilder()

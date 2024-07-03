@@ -3,8 +3,8 @@ import {
     Colors,
     EmbedBuilder,
     GuildMember,
+    SharedSlashCommand,
     SlashCommandBuilder,
-    SlashCommandOptionsOnlyBuilder,
 } from "discord.js";
 import { Command } from "../../types";
 import {
@@ -15,12 +15,12 @@ import {
 import { musicPlayers } from "../../core/music";
 
 export class StopCommand implements Command {
-    readonly data: SlashCommandOptionsOnlyBuilder;
+    readonly data: SharedSlashCommand;
 
     constructor() {
         this.data = new SlashCommandBuilder()
             .setName("stop")
-            .setDescription("Stops the music player and clears the song queue.")
+            .setDescription("Stops the music player.")
             .setDMPermission(false);
     }
 
@@ -68,7 +68,7 @@ export class StopCommand implements Command {
 
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)
-            .setDescription(":stop_button:  -  Music player stopped.");
+            .setDescription(":stop_button:  -  Music player stopped");
 
         await interaction.reply({ embeds: [embed] });
     }

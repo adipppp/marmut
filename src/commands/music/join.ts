@@ -1,8 +1,8 @@
 import {
     ChatInputCommandInteraction,
     GuildMember,
+    SharedSlashCommand,
     SlashCommandBuilder,
-    SlashCommandOptionsOnlyBuilder,
     VoiceBasedChannel,
 } from "discord.js";
 import { Command } from "../../types";
@@ -14,7 +14,7 @@ import {
 import { joinVoiceChannel } from "@discordjs/voice";
 
 export class JoinCommand implements Command {
-    readonly data: SlashCommandOptionsOnlyBuilder;
+    readonly data: SharedSlashCommand;
 
     constructor() {
         this.data = new SlashCommandBuilder()

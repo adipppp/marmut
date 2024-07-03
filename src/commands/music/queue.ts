@@ -2,8 +2,8 @@ import {
     ButtonInteraction,
     ChatInputCommandInteraction,
     GuildMember,
+    SharedSlashCommand,
     SlashCommandBuilder,
-    SlashCommandOptionsOnlyBuilder,
     Snowflake,
 } from "discord.js";
 import { Command } from "../../types";
@@ -17,7 +17,7 @@ import { musicPlayers } from "../../core/music";
 import { QueueView } from "../../views/QueueView";
 
 export class QueueCommand implements Command {
-    readonly data: SlashCommandOptionsOnlyBuilder;
+    readonly data: SharedSlashCommand;
 
     constructor() {
         this.data = new SlashCommandBuilder()

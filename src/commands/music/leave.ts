@@ -1,8 +1,8 @@
 import {
     ChatInputCommandInteraction,
     GuildMember,
+    SharedSlashCommand,
     SlashCommandBuilder,
-    SlashCommandOptionsOnlyBuilder,
 } from "discord.js";
 import { Command } from "../../types";
 import {
@@ -14,7 +14,7 @@ import { getVoiceConnection } from "@discordjs/voice";
 import { musicPlayers } from "../../core/music";
 
 export class LeaveCommand implements Command {
-    readonly data: SlashCommandOptionsOnlyBuilder;
+    readonly data: SharedSlashCommand;
 
     constructor() {
         this.data = new SlashCommandBuilder()
