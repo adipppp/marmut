@@ -224,7 +224,7 @@ export class SearchCommand implements Command {
         const embed = this.createPlayingEmbed(song, currentIndex);
 
         await interaction.deferReply();
-        await player.play(song, interaction.channel);
+        await player.play(song, interaction.channel!);
         await interaction.editReply({ embeds: [embed] });
     }
 

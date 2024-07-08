@@ -136,7 +136,7 @@ export class PlayCommand implements Command {
         const song = this.createSong(result);
         const currentIndex = player.getCurrentIndex();
 
-        await player.play(song, interaction.channel);
+        await player.play(song, interaction.channel!);
 
         const embed = this.createEmbed(song, currentIndex);
         await interaction.editReply({ embeds: [embed] });

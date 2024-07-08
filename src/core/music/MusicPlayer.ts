@@ -13,22 +13,22 @@ import ytdl from "@distube/ytdl-core";
 export class MusicPlayer {
     private readonly guildId: Snowflake;
     private songIdArray: bigint[];
-    private _currentIndex: number;
-    private _volume: number;
+    private currentIndex: number;
+    private volume: number;
 
     constructor(guildId: Snowflake) {
         this.guildId = guildId;
         this.songIdArray = [];
-        this._currentIndex = -1;
-        this._volume = 50;
+        this.currentIndex = -1;
+        this.volume = 50;
     }
 
     private async addSong(song: Song) {
         const createdSong = await prisma.song.create({ data: song });
         this.songIdArray.push(createdSong.id);
 
-        if (this._currentIndex === -1) {
-            this._currentIndex = 0;
+        if (this.currentIndex === -1) {
+            this.currentIndex = 0;
         }
 
         return createdSong;
@@ -41,7 +41,7 @@ export class MusicPlayer {
         });
 
         this.songIdArray = [];
-        this._currentIndex = -1;
+        this.currentIndex = -1;
 
         return deletedSongs;
     }
@@ -97,11 +97,11 @@ export class MusicPlayer {
             );
     }
 
-    private async handleIdleState(channel: TextBasedChannel | null) {
-        if (++this._currentIndex >= this.songIdArray.length) {
+    private async handleIdleState(channel: TextBasedChannel) {
+        if (this.currentIndex >= this.songIdArray.length) {
             await this.removeAllSongs();
         } else {
-            const nextSongId = this.songIdArray[this._currentIndex];
+            const nextSongId = this.songIdArray[this.currentIndex];
             const nextSong = (await prisma.song.findUnique({
                 select: {
                     title: true,
@@ -115,7 +115,7 @@ export class MusicPlayer {
             await this.play(nextSong, channel);
 
             const embed = this.createEmbed(nextSong);
-            await channel?.send({ embeds: [embed] });
+            await channel.send({ embeds: [embed] });
         }
     }
 
@@ -127,14 +127,14 @@ export class MusicPlayer {
         return audioPlayer.state.status === AudioPlayerStatus.Idle;
     }
 
-    async play(song: Song, channel: TextBasedChannel | null) {
+    async play(song: Song, channel: TextBasedChannel) {
         const audioPlayer = this.getAudioPlayer();
         if (!audioPlayer) {
             throw new Error("Voice connection has not been established.");
         }
 
         if (
-            this._currentIndex === -1 ||
+            this.currentIndex === -1 ||
             audioPlayer.state.status !== AudioPlayerStatus.Idle
         ) {
             await this.addSong(song);
@@ -145,7 +145,7 @@ export class MusicPlayer {
             const resource = createAudioResource(stream, {
                 inlineVolume: true,
             });
-            resource.volume!.setVolume(this._volume / 100);
+            resource.volume!.setVolume(this.volume / 100);
 
             audioPlayer.once(AudioPlayerStatus.Idle, async () => {
                 await this.handleIdleState(channel);
@@ -195,11 +195,11 @@ export class MusicPlayer {
             where: { id: songId },
         });
 
-        if (this._currentIndex >= index) {
-            if (this._currentIndex === index) {
+        if (this.currentIndex >= index) {
+            if (this.currentIndex === index) {
                 this.skip();
             }
-            this._currentIndex--;
+            this.currentIndex--;
         }
 
         this.songIdArray.splice(index, 1);
@@ -208,11 +208,11 @@ export class MusicPlayer {
     }
 
     getVolume() {
-        return this._volume;
+        return this.volume;
     }
 
     setVolume(volume: number) {
-        this._volume = Math.trunc(volume);
+        this.volume = Math.trunc(volume);
         const audioPlayer = this.getAudioPlayer();
         if (
             !audioPlayer ||
@@ -225,11 +225,11 @@ export class MusicPlayer {
     }
 
     getCurrentIndex() {
-        return this._currentIndex;
+        return this.currentIndex;
     }
 
     async getCurrentSong() {
-        const songId = this.songIdArray[this._currentIndex];
+        const songId = this.songIdArray[this.currentIndex];
         return await prisma.song.findUnique({ where: { id: songId } });
     }
 
