@@ -9,18 +9,21 @@ import { prisma } from "../client";
 import { Song } from "./Song";
 import { Colors, EmbedBuilder, Snowflake, TextBasedChannel } from "discord.js";
 import ytdl from "@distube/ytdl-core";
+import { RepeatMode } from "../../enums";
 
 export class MusicPlayer {
     private readonly guildId: Snowflake;
     private songIdArray: bigint[];
     private currentIndex: number;
     private volume: number;
+    private repeatMode: RepeatMode;
 
     constructor(guildId: Snowflake) {
         this.guildId = guildId;
         this.songIdArray = [];
         this.currentIndex = -1;
         this.volume = 50;
+        this.repeatMode = RepeatMode.Off;
     }
 
     private async addSong(song: Song) {
@@ -97,7 +100,20 @@ export class MusicPlayer {
             );
     }
 
+    private handleCurrentIndexChange() {
+        if (
+            this.repeatMode === RepeatMode.Queue &&
+            this.songIdArray.length > 0
+        ) {
+            this.currentIndex = ++this.currentIndex % this.songIdArray.length;
+        } else if (this.repeatMode !== RepeatMode.Song) {
+            this.currentIndex++;
+        }
+    }
+
     private async handleIdleState(channel: TextBasedChannel) {
+        this.handleCurrentIndexChange();
+
         if (this.currentIndex >= this.songIdArray.length) {
             await this.removeAllSongs();
         } else {
@@ -222,6 +238,14 @@ export class MusicPlayer {
         }
         const resource = audioPlayer.state.resource;
         resource.volume!.setVolume(volume / 100);
+    }
+
+    getRepeatMode() {
+        return this.repeatMode;
+    }
+
+    setRepeatMode(mode: RepeatMode) {
+        this.repeatMode = mode;
     }
 
     getCurrentIndex() {
