@@ -1,8 +1,8 @@
 import { ChatInputCommandInteraction, SharedSlashCommand } from "discord.js";
 
-export type AsyncRunner = (args: ChatInputCommandInteraction) => Promise<void>;
+export type AsyncRunner = (...args: any[]) => Promise<void>;
 
-export type Runner = (args: ChatInputCommandInteraction) => void;
+export type Runner = (...args: any[]) => void;
 
 export interface Command {
     data: SharedSlashCommand;
@@ -10,7 +10,7 @@ export interface Command {
 }
 
 export interface Handler {
-    handle: (...args: any[]) => Promise<void> | void;
+    handle: Runner | AsyncRunner;
 }
 
 export interface SongData {
