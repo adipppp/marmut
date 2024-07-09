@@ -1,7 +1,7 @@
 import { VoiceState } from "discord.js";
 import { Handler } from "../types";
-import { musicPlayers } from "../core/music";
 import { getVoiceConnection } from "@discordjs/voice";
+import { deleteMusicPlayer, getMusicPlayer } from "../utils/functions";
 
 export class VoiceStateUpdateHandler implements Handler {
     async handle(oldState: VoiceState, newState: VoiceState) {
@@ -12,10 +12,10 @@ export class VoiceStateUpdateHandler implements Handler {
             return;
         }
 
-        const player = musicPlayers.get(guildId);
-        await player?.stop();
+        const player = getMusicPlayer(guildId);
+        await player.stop();
 
-        musicPlayers.delete(guildId);
+        deleteMusicPlayer(guildId);
 
         const connection = getVoiceConnection(guildId);
         connection?.destroy();
