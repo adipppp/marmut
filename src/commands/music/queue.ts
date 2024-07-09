@@ -86,7 +86,13 @@ export class QueueCommand implements Command {
         const actionRow = await view.getActionRow();
         const embed = await view.getEmbed();
 
-        await interaction.update({ components: [actionRow], embeds: [embed] });
+        if (actionRow.components.length === 0)
+            await interaction.update({ components: [], embeds: [embed] });
+        else
+            await interaction.update({
+                components: [actionRow],
+                embeds: [embed],
+            });
     }
 
     async run(interaction: ChatInputCommandInteraction) {
