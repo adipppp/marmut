@@ -185,7 +185,13 @@ export class MusicPlayer {
         if (!audioPlayer) {
             throw new Error("Voice connection has not been established.");
         }
+
         audioPlayer.unpause();
+
+        if (this.repeatMode === RepeatMode.Song) {
+            this.currentIndex++;
+        }
+
         return audioPlayer.stop();
     }
 
@@ -229,6 +235,7 @@ export class MusicPlayer {
 
     setVolume(volume: number) {
         this.volume = Math.trunc(volume);
+
         const audioPlayer = this.getAudioPlayer();
         if (
             !audioPlayer ||
@@ -236,6 +243,7 @@ export class MusicPlayer {
         ) {
             return;
         }
+
         const resource = audioPlayer.state.resource;
         resource.volume!.setVolume(volume / 100);
     }
