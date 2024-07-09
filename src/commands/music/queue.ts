@@ -10,10 +10,9 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
-    createMusicPlayer,
+    getMusicPlayer,
     inVoiceChannel,
 } from "../../utils/functions";
-import { musicPlayers } from "../../core/music";
 import { QueueView } from "../../views/QueueView";
 
 export class QueueCommand implements Command {
@@ -96,9 +95,9 @@ export class QueueCommand implements Command {
         }
 
         const guildId = interaction.guildId!;
-        const player = musicPlayers.get(guildId) ?? createMusicPlayer(guildId);
+        const player = getMusicPlayer(guildId);
 
-        if (!player || player.isIdle()) {
+        if (player.isIdle()) {
             await interaction.reply({
                 content: "There is no song playing.",
                 ephemeral: true,

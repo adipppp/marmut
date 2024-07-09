@@ -10,9 +10,9 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
+    getMusicPlayer,
     inVoiceChannel,
 } from "../../utils/functions";
-import { musicPlayers } from "../../core/music";
 
 export class SkipCommand implements Command {
     readonly data: SharedSlashCommand;
@@ -64,9 +64,9 @@ export class SkipCommand implements Command {
         }
 
         const guild = interaction.guild!;
-        const player = musicPlayers.get(guild.id);
+        const player = getMusicPlayer(guild.id);
 
-        if (!player || player.isIdle()) {
+        if (player.isIdle()) {
             await interaction.reply({
                 content: "There is no song playing.",
                 ephemeral: true,

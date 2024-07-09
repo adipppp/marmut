@@ -8,10 +8,10 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
+    getMusicPlayer,
     inVoiceChannel,
 } from "../../utils/functions";
 import { getVoiceConnection } from "@discordjs/voice";
-import { musicPlayers } from "../../core/music";
 
 export class LeaveCommand implements Command {
     readonly data: SharedSlashCommand;
@@ -62,8 +62,8 @@ export class LeaveCommand implements Command {
             return;
         }
 
-        const player = musicPlayers.get(interaction.guildId!);
-        await player?.stop();
+        const player = getMusicPlayer(interaction.guildId!);
+        await player.stop();
 
         const connection = getVoiceConnection(interaction.guildId!)!;
         connection.destroy();

@@ -10,9 +10,9 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
+    getMusicPlayer,
     inVoiceChannel,
 } from "../../utils/functions";
-import { musicPlayers } from "../../core/music";
 
 export class StopCommand implements Command {
     readonly data: SharedSlashCommand;
@@ -63,8 +63,8 @@ export class StopCommand implements Command {
             return;
         }
 
-        const player = musicPlayers.get(interaction.guildId!);
-        await player?.stop();
+        const player = getMusicPlayer(interaction.guildId!);
+        await player.stop();
 
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)

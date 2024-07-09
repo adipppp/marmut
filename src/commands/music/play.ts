@@ -11,12 +11,12 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientIsPlayingIn,
-    createMusicPlayer,
+    getMusicPlayer,
     inVoiceChannel,
 } from "../../utils/functions";
 import { joinVoiceChannel } from "@discordjs/voice";
 import YouTube, { Video } from "youtube-sr";
-import { Song, musicPlayers } from "../../core/music";
+import { Song } from "../../core/music";
 
 export class PlayCommand implements Command {
     readonly data: SharedSlashCommand;
@@ -132,7 +132,7 @@ export class PlayCommand implements Command {
             return;
         }
 
-        const player = musicPlayers.get(guildId) ?? createMusicPlayer(guildId);
+        const player = getMusicPlayer(guildId);
         const song = this.createSong(result);
         const currentIndex = player.getCurrentIndex();
 

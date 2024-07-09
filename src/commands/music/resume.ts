@@ -10,9 +10,10 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
+    getMusicPlayer,
     inVoiceChannel,
 } from "../../utils/functions";
-import { Song, musicPlayers } from "../../core/music";
+import { Song } from "../../core/music";
 
 export class ResumeCommand implements Command {
     readonly data: SharedSlashCommand;
@@ -74,9 +75,9 @@ export class ResumeCommand implements Command {
             return;
         }
 
-        const player = musicPlayers.get(interaction.guildId!);
+        const player = getMusicPlayer(interaction.guildId!);
 
-        if (!player || player.isIdle()) {
+        if (player.isIdle()) {
             await interaction.reply({
                 content: "There is no song playing.",
                 ephemeral: true,

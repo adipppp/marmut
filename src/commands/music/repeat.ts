@@ -6,13 +6,12 @@ import {
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
-import { musicPlayers } from "../../core/music";
 import { RepeatMode } from "../../enums";
 import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
-    createMusicPlayer,
+    getMusicPlayer,
     inVoiceChannel,
 } from "../../utils/functions";
 
@@ -75,7 +74,7 @@ export class RepeatCommand implements Command {
         let desc = null;
         switch (mode) {
             case RepeatMode.Off:
-                desc = ":x:  -  Current repeat mode: Off";
+                desc = ":repeat:  -  Current repeat mode: Off";
                 break;
             case RepeatMode.Song:
                 desc = ":repeat_one:  -  Current repeat mode: Song";
@@ -120,7 +119,7 @@ export class RepeatCommand implements Command {
 
         const inputMode = interaction.options.getString("mode");
         const guildId = interaction.guildId!;
-        const player = musicPlayers.get(guildId) ?? createMusicPlayer(guildId);
+        const player = getMusicPlayer(guildId);
 
         if (inputMode === null) {
             const mode = player.getRepeatMode();

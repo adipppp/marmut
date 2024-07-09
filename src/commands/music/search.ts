@@ -16,12 +16,12 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientIsPlayingIn,
-    createMusicPlayer,
+    getMusicPlayer,
     inVoiceChannel,
 } from "../../utils/functions";
 import YouTube, { Video } from "youtube-sr";
 import { joinVoiceChannel } from "@discordjs/voice";
-import { Song, musicPlayers } from "../../core/music";
+import { Song } from "../../core/music";
 
 const NUMBER_EMOJIS = [
     ":one:",
@@ -219,7 +219,7 @@ export class SearchCommand implements Command {
 
         const customIdInt = parseInt(interaction.customId);
         const song = songs[customIdInt - 1];
-        const player = musicPlayers.get(guildId) ?? createMusicPlayer(guildId);
+        const player = getMusicPlayer(guildId);
         const currentIndex = player.getCurrentIndex();
         const embed = this.createPlayingEmbed(song, currentIndex);
 

@@ -10,10 +10,9 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
-    createMusicPlayer,
+    getMusicPlayer,
     inVoiceChannel,
 } from "../../utils/functions";
-import { musicPlayers } from "../../core/music";
 
 export class VolumeCommand implements Command {
     readonly data: SharedSlashCommand;
@@ -72,7 +71,7 @@ export class VolumeCommand implements Command {
 
         const guild = interaction.guild!;
         const guildId = guild.id;
-        const player = musicPlayers.get(guildId) ?? createMusicPlayer(guildId);
+        const player = getMusicPlayer(guildId);
 
         const currentVolume = player.getVolume();
         const newVolume = interaction.options.getInteger("volume");
