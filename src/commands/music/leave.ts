@@ -62,10 +62,12 @@ export class LeaveCommand implements Command {
             return;
         }
 
-        const player = getMusicPlayer(interaction.guildId!);
+        const guildId = interaction.guildId!;
+
+        const player = getMusicPlayer(guildId);
         await player.stop();
 
-        const connection = getVoiceConnection(interaction.guildId!)!;
+        const connection = getVoiceConnection(guildId)!;
         connection.destroy();
 
         await interaction.reply("Disconnected from the voice channel.");
