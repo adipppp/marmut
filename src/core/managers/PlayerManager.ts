@@ -1,4 +1,4 @@
 import { Collection, Snowflake } from "discord.js";
-import { MusicPlayer } from "./MusicPlayer";
+import { MusicPlayer } from "../music";
 
 export const musicPlayers = new Collection<Snowflake, MusicPlayer>();

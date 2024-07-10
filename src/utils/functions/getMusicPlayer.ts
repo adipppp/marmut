@@ -1,5 +1,6 @@
 import { Snowflake } from "discord.js";
-import { MusicPlayer, musicPlayers } from "../../core/music";
+import { MusicPlayer } from "../../core/music";
+import { musicPlayers } from "../../core/managers";
 
 export function getMusicPlayer(guildId: Snowflake) {
     let player = musicPlayers.get(guildId);
