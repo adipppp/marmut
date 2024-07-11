@@ -15,9 +15,11 @@ import {
 } from "../../utils/functions";
 
 export class SkipCommand implements Command {
+    readonly cooldown: number;
     readonly data: SharedSlashCommand;
 
     constructor() {
+        this.cooldown = 1;
         this.data = new SlashCommandBuilder()
             .setName("skip")
             .setDescription("Skips the current song.")

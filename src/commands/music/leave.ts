@@ -14,9 +14,11 @@ import {
 import { getVoiceConnection } from "@discordjs/voice";
 
 export class LeaveCommand implements Command {
+    readonly cooldown: number;
     readonly data: SharedSlashCommand;
 
     constructor() {
+        this.cooldown = 2;
         this.data = new SlashCommandBuilder()
             .setName("leave")
             .setDescription("Disconnects from the voice channel.")

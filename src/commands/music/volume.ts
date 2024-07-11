@@ -15,9 +15,11 @@ import {
 } from "../../utils/functions";
 
 export class VolumeCommand implements Command {
+    readonly cooldown: number;
     readonly data: SharedSlashCommand;
 
     constructor() {
+        this.cooldown = 1;
         this.data = new SlashCommandBuilder()
             .setName("volume")
             .setDescription("Changes the volume of the music player.")

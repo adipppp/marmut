@@ -14,9 +14,11 @@ import {
 import { joinVoiceChannel } from "@discordjs/voice";
 
 export class JoinCommand implements Command {
+    readonly cooldown: number;
     readonly data: SharedSlashCommand;
 
     constructor() {
+        this.cooldown = 2;
         this.data = new SlashCommandBuilder()
             .setName("join")
             .setDescription("Connects to a voice channel.")

@@ -19,9 +19,11 @@ import YouTube, { Video } from "youtube-sr";
 import { Song } from "../../core/music";
 
 export class PlayCommand implements Command {
+    readonly cooldown: number;
     readonly data: SharedSlashCommand;
 
     constructor() {
+        this.cooldown = 3;
         this.data = new SlashCommandBuilder()
             .setName("play")
             .setDescription("Plays a song.")

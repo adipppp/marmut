@@ -16,9 +16,11 @@ import {
 import { Song } from "../../core/music";
 
 export class ResumeCommand implements Command {
+    readonly cooldown: number;
     readonly data: SharedSlashCommand;
 
     constructor() {
+        this.cooldown = 1;
         this.data = new SlashCommandBuilder()
             .setName("resume")
             .setDescription("Resumes the music player.")

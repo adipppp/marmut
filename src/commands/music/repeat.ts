@@ -16,9 +16,11 @@ import {
 } from "../../utils/functions";
 
 export class RepeatCommand implements Command {
+    readonly cooldown: number;
     readonly data: SharedSlashCommand;
 
     constructor() {
+        this.cooldown = 1;
         this.data = new SlashCommandBuilder()
             .setName("repeat")
             .setDescription("Sets the repeat mode of the music player.")

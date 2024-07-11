@@ -25,12 +25,25 @@ export class MarmutClient extends Client {
     }
 
     private registerListeners() {
-        this.once(Events.ClientReady, new ClientReadyHandler().handle);
+        const clientReadyHandler = new ClientReadyHandler();
+        const interactionCreateHandler = new InteractionCreateHandler(
+            this.commands
+        );
+        const voiceStateUpdateHandler = new VoiceStateUpdateHandler();
+
+        this.once(
+            Events.ClientReady,
+            clientReadyHandler.handle.bind(clientReadyHandler)
+        );
         this.on(
             Events.InteractionCreate,
-            new InteractionCreateHandler(this.commands).handle
+            interactionCreateHandler.handle.bind(interactionCreateHandler)
         );
-        this.on(Events.VoiceStateUpdate, new VoiceStateUpdateHandler().handle);
+        this.on(
+            Events.VoiceStateUpdate,
+            voiceStateUpdateHandler.handle.bind(voiceStateUpdateHandler)
+        );
+
         this.on("error", console.error);
         this.on("debug", console.debug);
     }

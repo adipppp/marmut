@@ -37,9 +37,11 @@ const NUMBER_EMOJIS = [
 ];
 
 export class SearchCommand implements Command {
+    readonly cooldown: number;
     readonly data: SharedSlashCommand;
 
     constructor() {
+        this.cooldown = 3;
         this.data = new SlashCommandBuilder()
             .setName("search")
             .setDescription("Searches for songs to play.")

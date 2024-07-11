@@ -15,9 +15,11 @@ import {
 } from "../../utils/functions";
 
 export class StopCommand implements Command {
+    readonly cooldown: number;
     readonly data: SharedSlashCommand;
 
     constructor() {
+        this.cooldown = 1;
         this.data = new SlashCommandBuilder()
             .setName("stop")
             .setDescription("Stops the music player.")

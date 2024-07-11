@@ -163,6 +163,11 @@ export class MusicPlayer {
             });
             resource.volume!.setVolume(this.volume / 100);
 
+            audioPlayer.once("error", (err) => {
+                console.error(err);
+                stream.emit("error", err);
+            });
+
             audioPlayer.once(AudioPlayerStatus.Idle, async () => {
                 await this.handleIdleState(channel);
             });

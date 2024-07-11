@@ -15,9 +15,11 @@ import {
 } from "../../utils/functions";
 
 export class RemoveCommand implements Command {
+    readonly cooldown: number;
     readonly data: SharedSlashCommand;
 
     constructor() {
+        this.cooldown = 1;
         this.data = new SlashCommandBuilder()
             .setName("remove")
             .setDescription("Removes a song from the queue.")

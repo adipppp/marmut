@@ -16,9 +16,11 @@ import {
 import { QueueView } from "../../views/QueueView";
 
 export class QueueCommand implements Command {
+    readonly cooldown: number;
     readonly data: SharedSlashCommand;
 
     constructor() {
+        this.cooldown = 1;
         this.data = new SlashCommandBuilder()
             .setName("queue")
             .setDescription("Displays the current song queue.")

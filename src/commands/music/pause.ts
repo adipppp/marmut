@@ -15,9 +15,11 @@ import {
 } from "../../utils/functions";
 
 export class PauseCommand implements Command {
+    readonly cooldown: number;
     readonly data: SharedSlashCommand;
 
     constructor() {
+        this.cooldown = 1;
         this.data = new SlashCommandBuilder()
             .setName("pause")
             .setDescription("Pauses the music player. Use /resume to unpause.")
