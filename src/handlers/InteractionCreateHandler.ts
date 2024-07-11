@@ -1,16 +1,18 @@
+import { MarmutClient } from "../core/client";
 import { cooldowns } from "../core/managers";
-import { Command, Handler } from "../types";
+import { EventHandler } from "../types";
 import {
     BaseInteraction,
     ChatInputCommandInteraction,
     Collection,
+    Events,
 } from "discord.js";
 
-export class InteractionCreateHandler implements Handler {
-    private readonly commands: Collection<string, Command>;
+export class InteractionCreateHandler implements EventHandler {
+    readonly eventName: Events;
 
-    constructor(commands: Collection<string, Command>) {
-        this.commands = commands;
+    constructor() {
+        this.eventName = Events.InteractionCreate;
     }
 
     private getRemainingDuration(interaction: ChatInputCommandInteraction) {
@@ -19,7 +21,9 @@ export class InteractionCreateHandler implements Handler {
         const guildId = interaction.guildId!;
         const compositeId = BigInt(userId) ^ BigInt(guildId);
 
-        const command = this.commands.get(commandName)!;
+        const commands = MarmutClient.getInstance().commands;
+
+        const command = commands.get(commandName)!;
         const commandNames = cooldowns.get(compositeId)!;
         const cooldownStart = commandNames.get(commandName)!;
 
@@ -63,8 +67,10 @@ export class InteractionCreateHandler implements Handler {
     }
 
     private deleteCooldownOnTimeout(interaction: ChatInputCommandInteraction) {
+        const commands = MarmutClient.getInstance().commands;
+
         const commandName = interaction.commandName!;
-        const command = this.commands.get(commandName)!;
+        const command = commands.get(commandName)!;
         const cooldownDuration = command.cooldown;
 
         setTimeout(
@@ -88,7 +94,9 @@ export class InteractionCreateHandler implements Handler {
 
         this.setCooldown(interaction);
 
-        const command = this.commands.get(interaction.commandName)!;
+        const commands = MarmutClient.getInstance().commands;
+
+        const command = commands.get(interaction.commandName)!;
         try {
             await command.run(interaction);
         } catch (err) {

@@ -1,9 +1,15 @@
-import { VoiceState } from "discord.js";
-import { Handler } from "../types";
+import { Events, VoiceState } from "discord.js";
 import { getVoiceConnection } from "@discordjs/voice";
 import { deleteMusicPlayer, getMusicPlayer } from "../utils/functions";
+import { EventHandler } from "../types";
 
-export class VoiceStateUpdateHandler implements Handler {
+export class VoiceStateUpdateHandler implements EventHandler {
+    readonly eventName: Events;
+
+    constructor() {
+        this.eventName = Events.VoiceStateUpdate;
+    }
+
     async handle(oldState: VoiceState, newState: VoiceState) {
         const clientId = oldState.client.user.id;
         const guildId = oldState.guild.id;
