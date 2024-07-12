@@ -133,13 +133,17 @@ export class QueueCommand implements Command {
         const originalUserId = interaction.user.id;
 
         collector.on("collect", async (interaction: ButtonInteraction) => {
-            if (
-                !(await this.validateUser(interaction, originalUserId)) ||
-                !(await this.validatePreconditions(interaction))
-            )
-                return;
+            try {
+                if (
+                    !(await this.validateUser(interaction, originalUserId)) ||
+                    !(await this.validatePreconditions(interaction))
+                )
+                    return;
 
-            await this.handleValidInteraction(interaction, view);
+                await this.handleValidInteraction(interaction, view);
+            } catch (err) {
+                console.error(err);
+            }
         });
     }
 }

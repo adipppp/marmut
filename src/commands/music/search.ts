@@ -148,7 +148,7 @@ export class SearchCommand implements Command {
 
         for (let i = 1; i < songs.length; i++) {
             const song = songs[i];
-            desc += `\n[${NUMBER_EMOJIS[i].padEnd(8)}${song.title}](${
+            desc += `\n\n[${NUMBER_EMOJIS[i].padEnd(8)}${song.title}](${
                 song.videoUrl
             })`;
         }
@@ -270,18 +270,22 @@ export class SearchCommand implements Command {
         const originalUserId = interaction.user.id;
 
         collector.on("collect", async (interaction: ButtonInteraction) => {
-            if (
-                !(await this.validateUser(interaction, originalUserId)) ||
-                !(await this.validatePreconditions(interaction))
-            )
-                return;
+            try {
+                if (
+                    !(await this.validateUser(interaction, originalUserId)) ||
+                    !(await this.validatePreconditions(interaction))
+                )
+                    return;
 
-            collector.stop();
+                collector.stop();
 
-            await this.handleValidInteraction(interaction, songs);
+                await this.handleValidInteraction(interaction, songs);
 
-            rows = this.updateActionRowsWithDisabledButtons(rows);
-            await interaction.message.edit({ components: rows });
+                rows = this.updateActionRowsWithDisabledButtons(rows);
+                await interaction.message.edit({ components: rows });
+            } catch (err) {
+                console.error(err);
+            }
         });
     }
 }
