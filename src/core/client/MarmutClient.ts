@@ -26,7 +26,14 @@ export class MarmutClient extends Client {
         for (const file of handlerFiles) {
             const handler = await import(path.join(handlersPath, file));
             const instance = new handler[Object.keys(handler)[0]]();
-            this.on(instance.eventName, instance.handle.bind(instance));
+
+            this.on(instance.eventName, async (...args) => {
+                try {
+                    await instance.handle(...args);
+                } catch (err) {
+                    console.error(err);
+                }
+            });
         }
 
         this.on("error", console.error);

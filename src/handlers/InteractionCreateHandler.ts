@@ -100,9 +100,8 @@ export class InteractionCreateHandler implements EventHandler {
         try {
             await command.run(interaction);
         } catch (err) {
-            console.error(err);
             this.deleteCooldown(interaction);
-            return;
+            throw err;
         }
 
         this.deleteCooldownOnTimeout(interaction);
