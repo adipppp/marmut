@@ -126,7 +126,7 @@ export class PlayCommand implements Command {
             this.joinVoiceChannel(member.voice.channel!);
         }
 
-        const query = interaction.options.getString("query", true);
+        const query = interaction.options.getString("song", true);
         const result = await YouTube.searchOne(query);
 
         if (!result) {
