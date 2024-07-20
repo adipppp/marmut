@@ -67,14 +67,13 @@ export class MarmutClient extends Client {
         const commandFolders = fs.readdirSync(commandsPath);
 
         for (const folder of commandFolders) {
+            const folderPath = path.join(commandsPath, folder);
             const commandFiles = fs
-                .readdirSync(path.join(commandsPath, folder))
+                .readdirSync(folderPath)
                 .filter((file) => file.endsWith(".js"));
 
             for (const file of commandFiles) {
-                const command = await import(
-                    path.join(commandsPath, folder, file)
-                );
+                const command = await import(path.join(folderPath, file));
                 const instance = new command[Object.keys(command)[0]]();
                 this.commands.set(instance.data.name, instance);
             }

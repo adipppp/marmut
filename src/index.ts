@@ -2,7 +2,7 @@ import "dotenv/config";
 import { MarmutClient } from "./core/client";
 import { GatewayIntentBits } from "discord.js";
 
-function main() {
+async function main() {
     const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
     if (!DISCORD_TOKEN) {
@@ -13,7 +13,7 @@ function main() {
         intents: [GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.Guilds],
     });
 
-    marmut.login(DISCORD_TOKEN);
+    await marmut.login(DISCORD_TOKEN);
 }
 
 main();

@@ -142,7 +142,7 @@ export class SearchCommand implements Command {
             return "";
         }
 
-        let desc = `[${NUMBER_EMOJIS[0].padEnd(8)}${songs[0].title}](${
+        let desc = `${NUMBER_EMOJIS[0].padEnd(8)}[${songs[0].title}](${
             songs[0].videoUrl
         })`;
 
@@ -279,10 +279,10 @@ export class SearchCommand implements Command {
 
                 collector.stop();
 
-                await this.handleValidInteraction(interaction, songs);
-
                 rows = this.updateActionRowsWithDisabledButtons(rows);
                 await interaction.message.edit({ components: rows });
+
+                await this.handleValidInteraction(interaction, songs);
             } catch (err) {
                 console.error(err);
             }
