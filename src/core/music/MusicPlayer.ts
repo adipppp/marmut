@@ -114,7 +114,9 @@ export class MusicPlayer {
     private async handleIdleState(channel: TextBasedChannel) {
         this.handleCurrentIndexChange();
 
-        if (this.currentIndex >= this.songIdArray.length) {
+        if (this.songIdArray.length === 0) {
+            this.currentIndex = -1;
+        } else if (this.currentIndex >= this.songIdArray.length) {
             await this.removeAllSongs();
         } else {
             const nextSongId = this.songIdArray[this.currentIndex];
@@ -165,7 +167,7 @@ export class MusicPlayer {
 
             audioPlayer.once("error", (err) => {
                 console.error(err);
-                stream.emit("error", err);
+                this.currentIndex = this.songIdArray.length;
             });
 
             audioPlayer.once(AudioPlayerStatus.Idle, async () => {
@@ -192,10 +194,6 @@ export class MusicPlayer {
         }
 
         audioPlayer.unpause();
-
-        if (this.repeatMode === RepeatMode.Song) {
-            this.currentIndex++;
-        }
 
         return audioPlayer.stop();
     }
