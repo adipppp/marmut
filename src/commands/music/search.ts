@@ -1,8 +1,5 @@
 import {
-    ActionRowBuilder,
-    ButtonBuilder,
     ButtonInteraction,
-    ButtonStyle,
     ChatInputCommandInteraction,
     Colors,
     EmbedBuilder,
@@ -22,19 +19,7 @@ import {
 import YouTube, { Video } from "youtube-sr";
 import { joinVoiceChannel } from "@discordjs/voice";
 import { Song } from "../../core/music";
-
-const NUMBER_EMOJIS = [
-    ":one:",
-    ":two:",
-    ":three:",
-    ":four:",
-    ":five:",
-    ":six:",
-    ":seven:",
-    ":eight:",
-    ":nine:",
-    ":keycap_ten:",
-];
+import { SearchView } from "../../views";
 
 export class SearchCommand implements Command {
     readonly cooldown: number;
@@ -130,67 +115,6 @@ export class SearchCommand implements Command {
         );
     }
 
-    private createButton(index: number) {
-        return new ButtonBuilder()
-            .setCustomId((index + 1).toString())
-            .setLabel((index + 1).toString())
-            .setStyle(ButtonStyle.Success);
-    }
-
-    private createDescription(songs: Song[]) {
-        if (songs.length === 0) {
-            return "";
-        }
-
-        let desc = `${NUMBER_EMOJIS[0].padEnd(8)}[${songs[0].title}](${
-            songs[0].videoUrl
-        })`;
-
-        for (let i = 1; i < songs.length; i++) {
-            const song = songs[i];
-            desc += `\n\n[${NUMBER_EMOJIS[i].padEnd(8)}${song.title}](${
-                song.videoUrl
-            })`;
-        }
-
-        return desc;
-    }
-
-    private createActionRow(songs: Song[], start: number) {
-        const row: ActionRowBuilder<ButtonBuilder> = new ActionRowBuilder();
-        let j = start;
-        for (let i = 0; i < songs.length; i++) {
-            const button = this.createButton(j++);
-            row.addComponents(button);
-        }
-        return row;
-    }
-
-    private createActionRows(songs: Song[]) {
-        const actionRows = [];
-        const actionRow1 = this.createActionRow(songs.slice(0, 5), 0);
-        actionRows.push(actionRow1);
-        if (songs.length > 5) {
-            const actionRow2 = this.createActionRow(songs.slice(5, 10), 5);
-            actionRows.push(actionRow2);
-        }
-        return actionRows;
-    }
-
-    private updateActionRowsWithDisabledButtons(
-        rows: ActionRowBuilder<ButtonBuilder>[]
-    ) {
-        rows.forEach((row) =>
-            row.components.forEach((button) => button.setDisabled(true))
-        );
-        return rows;
-    }
-
-    private createSearchMenu(songs: Song[]) {
-        const desc = this.createDescription(songs);
-        return new EmbedBuilder().setColor(Colors.Red).setDescription(desc);
-    }
-
     private createPlayingEmbed(song: Song, currentIndex: number) {
         let description;
         if (currentIndex === -1) {
@@ -256,8 +180,10 @@ export class SearchCommand implements Command {
         }
 
         const songs = this.createSongs(results);
-        let rows = this.createActionRows(songs);
-        const searchMenu = this.createSearchMenu(songs);
+        const view = new SearchView(songs);
+
+        const rows = view.getActionRows();
+        const searchMenu = view.getEmbed();
 
         const message = await interaction.editReply({
             components: rows,
@@ -279,7 +205,10 @@ export class SearchCommand implements Command {
 
                 collector.stop();
 
-                rows = this.updateActionRowsWithDisabledButtons(rows);
+                rows.forEach((row) =>
+                    row.components.forEach((button) => button.setDisabled(true))
+                );
+
                 await interaction.message.edit({ components: rows });
 
                 await this.handleValidInteraction(interaction, songs);
