@@ -1,7 +1,12 @@
+import { getVoiceConnection, VoiceConnectionStatus } from "@discordjs/voice";
 import { Guild } from "discord.js";
 
 export function clientInVoiceChannelOf(guild: Guild) {
-    const clientId = guild.client.user.id;
-    const voiceState = guild.voiceStates.cache.get(clientId);
-    return voiceState !== undefined && voiceState.channelId;
+    const connection = getVoiceConnection(guild.id);
+    const status = connection?.state.status;
+    if (status === undefined || status === VoiceConnectionStatus.Destroyed) {
+        return false;
+    } else {
+        return true;
+    }
 }

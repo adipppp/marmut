@@ -139,7 +139,7 @@ export class MusicPlayer {
 
     isIdle() {
         const audioPlayer = this.getAudioPlayer();
-        if (!audioPlayer) {
+        if (audioPlayer === null) {
             throw new Error("Voice connection has not been established.");
         }
         return audioPlayer.state.status === AudioPlayerStatus.Idle;
@@ -147,7 +147,7 @@ export class MusicPlayer {
 
     async play(song: Song, channel: TextBasedChannel) {
         const audioPlayer = this.getAudioPlayer();
-        if (!audioPlayer) {
+        if (audioPlayer === null) {
             throw new Error("Voice connection has not been established.");
         }
 
@@ -189,7 +189,7 @@ export class MusicPlayer {
 
     skip() {
         const audioPlayer = this.getAudioPlayer();
-        if (!audioPlayer) {
+        if (audioPlayer === null) {
             throw new Error("Voice connection has not been established.");
         }
 
@@ -200,7 +200,7 @@ export class MusicPlayer {
 
     pause(interpolateSilence?: boolean) {
         const audioPlayer = this.getAudioPlayer();
-        if (!audioPlayer) {
+        if (audioPlayer === null) {
             throw new Error("Voice connection has not been established.");
         }
         return audioPlayer.pause(interpolateSilence);
@@ -208,7 +208,7 @@ export class MusicPlayer {
 
     unpause() {
         const audioPlayer = this.getAudioPlayer();
-        if (!audioPlayer) {
+        if (audioPlayer === null) {
             throw new Error("Voice connection has not been established.");
         }
         return audioPlayer.unpause();
@@ -241,7 +241,7 @@ export class MusicPlayer {
 
         const audioPlayer = this.getAudioPlayer();
         if (
-            !audioPlayer ||
+            audioPlayer === null ||
             audioPlayer.state.status === AudioPlayerStatus.Idle
         ) {
             return;

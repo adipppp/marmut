@@ -13,7 +13,7 @@ import {
     getMusicPlayer,
     inVoiceChannel,
 } from "../../utils/functions";
-import { QueueView } from "../../views/QueueView";
+import { QueueView } from "../../views";
 
 export class QueueCommand implements Command {
     readonly cooldown: number;
