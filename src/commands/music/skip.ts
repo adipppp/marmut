@@ -68,7 +68,7 @@ export class SkipCommand implements Command {
         const guild = interaction.guild!;
         const player = getMusicPlayer(guild.id);
 
-        if (player.isIdle()) {
+        if (!player.isPlaying()) {
             await interaction.reply({
                 content: "There is no song playing.",
                 ephemeral: true,

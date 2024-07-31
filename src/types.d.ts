@@ -4,20 +4,16 @@ import {
     SharedSlashCommand,
 } from "discord.js";
 
-export type AsyncRunner = (...args: any[]) => Promise<void>;
-
-export type Runner = (...args: any[]) => void;
-
 export interface Command {
     cooldown: number;
     data: SharedSlashCommand;
-    run: Runner | AsyncRunner;
+    run(interaction: ChatInputCommandInteraction): void | Promise<void>;
 }
 
 export interface EventHandler {
     eventName: Events;
     once?: boolean;
-    handle: Runner | AsyncRunner;
+    handle(...args: any[]): void | Promise<void>;
 }
 
 export interface SongData {

@@ -5,7 +5,7 @@ import {
     createAudioResource,
     getVoiceConnection,
 } from "@discordjs/voice";
-import { prisma } from "../client";
+import { marmut, prisma } from "../client";
 import { Song } from "./Song";
 import { Colors, EmbedBuilder, Snowflake, TextBasedChannel } from "discord.js";
 import ytdl from "@distube/ytdl-core";
@@ -17,6 +17,7 @@ export class MusicPlayer {
     private currentIndex: number;
     private volume: number;
     private repeatMode: RepeatMode;
+    private textChannelId?: Snowflake;
 
     constructor(guildId: Snowflake) {
         this.guildId = guildId;
@@ -29,11 +30,6 @@ export class MusicPlayer {
     private async addSong(song: Song) {
         const createdSong = await prisma.song.create({ data: song });
         this.songIdArray.push(createdSong.id);
-
-        if (this.currentIndex === -1) {
-            this.currentIndex = 0;
-        }
-
         return createdSong;
     }
 
@@ -44,9 +40,96 @@ export class MusicPlayer {
         });
 
         this.songIdArray = [];
-        this.currentIndex = -1;
 
         return deletedSongs;
+    }
+
+    private createEmbed(song: Song) {
+        return new EmbedBuilder()
+            .setColor(Colors.Red)
+            .setTimestamp()
+            .setThumbnail(song.thumbnailUrl)
+            .setFooter({ text: "Marmut" })
+            .setDescription(
+                `:arrow_forward:  -  Now Playing\n[${song.title}](${song.videoUrl})`
+            );
+    }
+
+    private handleCurrentIndexChange() {
+        if (
+            this.songIdArray.length > 0 &&
+            this.repeatMode === RepeatMode.Queue
+        ) {
+            this.currentIndex =
+                (this.currentIndex + 1) % this.songIdArray.length;
+        } else if (this.repeatMode !== RepeatMode.Song) {
+            this.currentIndex++;
+        }
+    }
+
+    private async handleIdleState() {
+        this.handleCurrentIndexChange();
+
+        if (this.songIdArray.length === 0) {
+            this.currentIndex = -1;
+        } else if (this.currentIndex >= this.songIdArray.length) {
+            await this.removeAllSongs();
+            this.currentIndex = -1;
+        } else {
+            const nextSongId = this.songIdArray[this.currentIndex];
+            const nextSong = (await prisma.song.findUnique({
+                select: {
+                    title: true,
+                    thumbnailUrl: true,
+                    videoUrl: true,
+                    duration: true,
+                },
+                where: { id: nextSongId },
+            }))!;
+
+            const channel = marmut.channels.cache.get(
+                this.textChannelId!
+            ) as TextBasedChannel;
+
+            await this.playSong(nextSong);
+
+            const embed = this.createEmbed(nextSong);
+            await channel.send({ embeds: [embed] });
+        }
+    }
+
+    private async playSong(song: Song) {
+        const audioPlayer = this.getAudioPlayer();
+        if (!audioPlayer) {
+            throw new Error("Voice connection has not been established.");
+        }
+
+        const stream = this.getAudioStream(song.videoUrl);
+        const resource = createAudioResource(stream, {
+            inlineVolume: true,
+        });
+        resource.volume!.setVolume(this.volume / 100);
+
+        audioPlayer.play(resource);
+    }
+
+    private getAudioStream(url: string) {
+        const dlChunkSize = process.env.DL_CHUNK_SIZE
+            ? 1024 * 1024 * parseInt(process.env.DL_CHUNK_SIZE)
+            : undefined;
+
+        const stream = ytdl(url, {
+            dlChunkSize,
+            filter: "audioonly",
+            quality: "highestaudio",
+        });
+
+        stream.once("error", (err) => {
+            console.error(err);
+            stream.destroy();
+        });
+
+        return stream;
     }
 
     private getAudioPlayer() {
@@ -65,116 +148,33 @@ export class MusicPlayer {
             audioPlayer = subscription.player;
         } else {
             audioPlayer = createAudioPlayer();
+
+            audioPlayer.on("error", (err) => {
+                console.error(err);
+                this.currentIndex = this.songIdArray.length;
+            });
+
+            audioPlayer.on(
+                AudioPlayerStatus.Idle,
+                async () => await this.handleIdleState()
+            );
+
             connection.subscribe(audioPlayer);
         }
 
         return audioPlayer;
     }
 
-    private getAudioStream(url: string) {
-        const dlChunkSize =
-            process.env.DL_CHUNK_SIZE !== undefined
-                ? 1024 * 1024 * parseInt(process.env.DL_CHUNK_SIZE)
-                : undefined;
-        const stream = ytdl(url, {
-            dlChunkSize,
-            filter: "audioonly",
-            quality: "highestaudio",
-        });
-        stream.once("error", (err) => {
-            console.error(err);
-            stream.destroy();
-        });
-
-        return stream;
-    }
-
-    private createEmbed(song: Song) {
-        return new EmbedBuilder()
-            .setColor(Colors.Red)
-            .setTimestamp()
-            .setThumbnail(song.thumbnailUrl)
-            .setFooter({ text: "Marmut" })
-            .setDescription(
-                `:arrow_forward:  -  Now Playing\n[${song.title}](${song.videoUrl})`
-            );
-    }
-
-    private handleCurrentIndexChange() {
-        if (
-            this.repeatMode === RepeatMode.Queue &&
-            this.songIdArray.length > 0
-        ) {
-            this.currentIndex = ++this.currentIndex % this.songIdArray.length;
-        } else if (this.repeatMode !== RepeatMode.Song) {
-            this.currentIndex++;
-        }
-    }
-
-    private async handleIdleState(channel: TextBasedChannel) {
-        this.handleCurrentIndexChange();
-
-        if (this.songIdArray.length === 0) {
-            this.currentIndex = -1;
-        } else if (this.currentIndex >= this.songIdArray.length) {
-            await this.removeAllSongs();
-        } else {
-            const nextSongId = this.songIdArray[this.currentIndex];
-            const nextSong = (await prisma.song.findUnique({
-                select: {
-                    title: true,
-                    thumbnailUrl: true,
-                    videoUrl: true,
-                    duration: true,
-                },
-                where: { id: nextSongId },
-            }))!;
-
-            await this.play(nextSong, channel);
-
-            const embed = this.createEmbed(nextSong);
-            await channel.send({ embeds: [embed] });
-        }
-    }
-
-    isIdle() {
-        const audioPlayer = this.getAudioPlayer();
-        if (audioPlayer === null) {
-            throw new Error("Voice connection has not been established.");
-        }
-        return audioPlayer.state.status === AudioPlayerStatus.Idle;
+    isPlaying() {
+        return this.currentIndex > -1;
     }
 
     async play(song: Song, channel: TextBasedChannel) {
-        const audioPlayer = this.getAudioPlayer();
-        if (audioPlayer === null) {
-            throw new Error("Voice connection has not been established.");
-        }
-
-        if (
-            this.currentIndex === -1 ||
-            audioPlayer.state.status !== AudioPlayerStatus.Idle
-        ) {
-            await this.addSong(song);
-        }
-
-        if (audioPlayer.state.status === AudioPlayerStatus.Idle) {
-            const stream = this.getAudioStream(song.videoUrl);
-            const resource = createAudioResource(stream, {
-                inlineVolume: true,
-            });
-            resource.volume!.setVolume(this.volume / 100);
-
-            audioPlayer.once("error", (err) => {
-                console.error(err);
-                this.currentIndex = this.songIdArray.length;
-            });
-
-            audioPlayer.once(AudioPlayerStatus.Idle, async () => {
-                await this.handleIdleState(channel);
-            });
-
-            audioPlayer.play(resource);
+        await this.addSong(song);
+        if (this.currentIndex === -1) {
+            this.currentIndex = 0;
+            this.textChannelId = channel.id;
+            await this.playSong(song);
         }
     }
 
@@ -189,7 +189,7 @@ export class MusicPlayer {
 
     skip() {
         const audioPlayer = this.getAudioPlayer();
-        if (audioPlayer === null) {
+        if (!audioPlayer) {
             throw new Error("Voice connection has not been established.");
         }
 
@@ -200,7 +200,7 @@ export class MusicPlayer {
 
     pause(interpolateSilence?: boolean) {
         const audioPlayer = this.getAudioPlayer();
-        if (audioPlayer === null) {
+        if (!audioPlayer) {
             throw new Error("Voice connection has not been established.");
         }
         return audioPlayer.pause(interpolateSilence);
@@ -208,7 +208,7 @@ export class MusicPlayer {
 
     unpause() {
         const audioPlayer = this.getAudioPlayer();
-        if (audioPlayer === null) {
+        if (!audioPlayer) {
             throw new Error("Voice connection has not been established.");
         }
         return audioPlayer.unpause();
@@ -220,10 +220,10 @@ export class MusicPlayer {
             where: { id: songId },
         });
 
-        if (this.currentIndex >= index) {
-            if (this.currentIndex === index) {
-                this.skip();
-            }
+        if (this.currentIndex > index) {
+            this.currentIndex--;
+        } else if (this.currentIndex === index) {
+            this.skip();
             this.currentIndex--;
         }
 
@@ -241,7 +241,7 @@ export class MusicPlayer {
 
         const audioPlayer = this.getAudioPlayer();
         if (
-            audioPlayer === null ||
+            !audioPlayer ||
             audioPlayer.state.status === AudioPlayerStatus.Idle
         ) {
             return;

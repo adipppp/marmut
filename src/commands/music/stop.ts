@@ -67,7 +67,7 @@ export class StopCommand implements Command {
 
         const player = getMusicPlayer(interaction.guildId!);
 
-        if (player.isIdle()) {
+        if (!player.isPlaying()) {
             await interaction.reply({
                 content: "There is no song playing.",
                 ephemeral: true,

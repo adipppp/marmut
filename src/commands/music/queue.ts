@@ -105,7 +105,7 @@ export class QueueCommand implements Command {
         const guildId = interaction.guildId!;
         const player = getMusicPlayer(guildId);
 
-        if (player.isIdle()) {
+        if (!player.isPlaying()) {
             await interaction.reply({
                 content: "There is no song playing.",
                 ephemeral: true,

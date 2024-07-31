@@ -208,7 +208,6 @@ export class SearchCommand implements Command {
                 rows.forEach((row) =>
                     row.components.forEach((button) => button.setDisabled(true))
                 );
-
                 await interaction.message.edit({ components: rows });
 
                 await this.handleValidInteraction(interaction, songs);

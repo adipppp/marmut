@@ -56,7 +56,7 @@ export class SearchView {
     }
 
     private createActionRow(songs: Song[], start: number) {
-        const row: ActionRowBuilder<ButtonBuilder> = new ActionRowBuilder();
+        const row = new ActionRowBuilder<ButtonBuilder>();
         let j = start;
         for (let i = 0; i < songs.length; i++) {
             const button = this.createButton(j++);

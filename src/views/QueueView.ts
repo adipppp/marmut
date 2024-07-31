@@ -10,17 +10,14 @@ import { MusicPlayer } from "../core/music";
 export class QueueView {
     private readonly player: MusicPlayer;
     private readonly embed: EmbedBuilder;
-    private readonly previousButton: ButtonBuilder;
-    private readonly nextButton: ButtonBuilder;
-    private readonly actionRow: ActionRowBuilder<ButtonBuilder>;
     private currentPage: number;
+    private previousButton?: ButtonBuilder;
+    private nextButton?: ButtonBuilder;
+    private actionRow?: ActionRowBuilder<ButtonBuilder>;
 
     constructor(player: MusicPlayer) {
         this.player = player;
         this.embed = new EmbedBuilder();
-        this.previousButton = this.createPreviousButton();
-        this.nextButton = this.createNextButton();
-        this.actionRow = new ActionRowBuilder();
         this.currentPage = 1;
     }
 
@@ -83,14 +80,23 @@ export class QueueView {
     }
 
     async getActionRow() {
-        const queue = await this.player.getQueue();
-
+        if (!this.actionRow) {
+            this.actionRow = new ActionRowBuilder();
+        }
         this.actionRow.setComponents([]);
 
+        const queue = await this.player.getQueue();
+
         if (this.currentPage > 1) {
+            if (!this.previousButton) {
+                this.previousButton = this.createPreviousButton();
+            }
             this.actionRow.addComponents(this.previousButton);
         }
         if (this.currentPage < Math.ceil(queue.length / 5)) {
+            if (!this.nextButton) {
+                this.nextButton = this.createNextButton();
+            }
             this.actionRow.addComponents(this.nextButton);
         }
 

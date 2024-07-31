@@ -3,5 +3,5 @@ import { musicPlayers } from "../../core/managers";
 
 export function clientIsPlayingIn(guild: Guild) {
     const player = musicPlayers.get(guild.id);
-    return player !== undefined && !player.isIdle();
+    return player !== undefined && player.isPlaying();
 }

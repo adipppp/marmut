@@ -37,7 +37,7 @@ export class JoinCommand implements Command {
         const channel = interaction.options.getChannel("channel");
         const guild = interaction.guild!;
 
-        if (channel !== null) {
+        if (channel) {
             const channelId = channel.id;
             const channelFromCache = guild.channels.cache.get(channelId)!;
 

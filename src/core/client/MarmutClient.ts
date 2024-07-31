@@ -1,4 +1,11 @@
-import { Client, ClientOptions, Collection, REST, Routes } from "discord.js";
+import {
+    Client,
+    ClientOptions,
+    Collection,
+    GatewayIntentBits,
+    REST,
+    Routes,
+} from "discord.js";
 import fs from "fs";
 import path from "path";
 import { Command } from "../../types";
@@ -7,7 +14,7 @@ const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
-export class MarmutClient extends Client {
+class MarmutClient extends Client {
     private static instance: MarmutClient;
     readonly commands: Collection<string, Command>;
 
@@ -66,8 +73,12 @@ export class MarmutClient extends Client {
         const commandsPath = path.join(process.cwd(), "dist", "commands");
         const commandFolders = fs.readdirSync(commandsPath);
 
-        for (const folder of commandFolders) {
-            const folderPath = path.join(commandsPath, folder);
+        for (const item of commandFolders) {
+            const folderPath = path.join(commandsPath, item);
+            const stats = fs.statSync(folderPath);
+
+            if (!stats.isDirectory()) continue;
+
             const commandFiles = fs
                 .readdirSync(folderPath)
                 .filter((file) => file.endsWith(".js"));
@@ -101,3 +112,7 @@ export class MarmutClient extends Client {
         return MarmutClient.instance;
     }
 }
+
+export const marmut = new MarmutClient({
+    intents: [GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.Guilds],
+});

@@ -86,8 +86,6 @@ export class RemoveCommand implements Command {
         return true;
     }
 
-    private createEmbed() {}
-
     async run(interaction: ChatInputCommandInteraction) {
         if (!(await this.validatePreconditions(interaction))) {
             return;
@@ -96,7 +94,7 @@ export class RemoveCommand implements Command {
         const guildId = interaction.guildId!;
         const player = getMusicPlayer(guildId);
 
-        if (player.isIdle()) {
+        if (!player.isPlaying()) {
             await interaction.reply({
                 content: "There is no song playing.",
                 ephemeral: true,

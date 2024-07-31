@@ -1,12 +1,12 @@
-import { MarmutClient } from "../core/client";
-import { cooldowns } from "../core/managers";
-import { EventHandler } from "../types";
 import {
     BaseInteraction,
     ChatInputCommandInteraction,
     Collection,
     Events,
 } from "discord.js";
+import { marmut } from "../core/client";
+import { cooldowns } from "../core/managers";
+import { EventHandler } from "../types";
 
 export class InteractionCreateHandler implements EventHandler {
     readonly eventName: Events;
@@ -21,7 +21,7 @@ export class InteractionCreateHandler implements EventHandler {
         const guildId = interaction.guildId!;
         const compositeId = BigInt(userId) ^ BigInt(guildId);
 
-        const commands = MarmutClient.getInstance().commands;
+        const commands = marmut.commands;
 
         const command = commands.get(commandName)!;
         const commandNames = cooldowns.get(compositeId)!;
@@ -30,59 +30,51 @@ export class InteractionCreateHandler implements EventHandler {
         return command.cooldown - (Date.now() - cooldownStart) / 1000;
     }
 
-    private isOnCooldown(interaction: ChatInputCommandInteraction) {
-        const commandName = interaction.commandName!;
-        const userId = interaction.user.id;
-        const guildId = interaction.guildId!;
-        const compositeId = BigInt(userId) ^ BigInt(guildId);
-
+    private setCooldown(commandName: string, compositeId: bigint) {
         let commandNames = cooldowns.get(compositeId);
-        if (commandNames === undefined) {
+        if (!commandNames) {
             commandNames = new Collection();
             cooldowns.set(compositeId, commandNames);
         }
-
-        return commandNames.has(commandName);
+        return commandNames.set(commandName, Date.now());
     }
 
-    private setCooldown(interaction: ChatInputCommandInteraction) {
-        const commandName = interaction.commandName!;
-        const userId = interaction.user.id;
-        const guildId = interaction.guildId!;
-        const compositeId = BigInt(userId) ^ BigInt(guildId);
-
+    private deleteCooldown(commandName: string, compositeId: bigint) {
         const commandNames = cooldowns.get(compositeId)!;
-        commandNames.set(commandName, Date.now());
+        return commandNames.delete(commandName);
     }
 
-    private deleteCooldown(interaction: ChatInputCommandInteraction) {
-        const commandName = interaction.commandName!;
-        const userId = interaction.user.id;
-        const guildId = interaction.guildId!;
-        const compositeId = BigInt(userId) ^ BigInt(guildId);
+    private async deleteCooldownOnTimeout(
+        commandName: string,
+        compositeId: bigint
+    ) {
+        const commands = marmut.commands;
 
-        const commandNames = cooldowns.get(compositeId)!;
-
-        commandNames.delete(commandName);
-    }
-
-    private deleteCooldownOnTimeout(interaction: ChatInputCommandInteraction) {
-        const commands = MarmutClient.getInstance().commands;
-
-        const commandName = interaction.commandName!;
         const command = commands.get(commandName)!;
         const cooldownDuration = command.cooldown;
 
-        setTimeout(
-            () => this.deleteCooldown(interaction),
-            cooldownDuration * 1000
+        return await new Promise<boolean>((resolve) =>
+            setTimeout(
+                () => resolve(this.deleteCooldown(commandName, compositeId)),
+                cooldownDuration * 1000
+            )
         );
+    }
+
+    private isOnCooldown(commandName: string, compositeId: bigint) {
+        const commandNames = cooldowns.get(compositeId);
+        return commandNames !== undefined && commandNames.has(commandName);
     }
 
     async handle(interaction: BaseInteraction) {
         if (!interaction.isChatInputCommand()) return;
 
-        if (this.isOnCooldown(interaction)) {
+        const commandName = interaction.commandName;
+        const userId = interaction.user.id;
+        const guildId = interaction.guildId!;
+        const compositeId = BigInt(userId) ^ BigInt(guildId);
+
+        if (this.isOnCooldown(commandName, compositeId)) {
             const duration =
                 this.getRemainingDuration(interaction).toPrecision(2);
             await interaction.reply({
@@ -92,18 +84,18 @@ export class InteractionCreateHandler implements EventHandler {
             return;
         }
 
-        this.setCooldown(interaction);
+        const commands = marmut.commands;
+        const command = commands.get(commandName)!;
 
-        const commands = MarmutClient.getInstance().commands;
+        this.setCooldown(commandName, compositeId);
 
-        const command = commands.get(interaction.commandName)!;
         try {
             await command.run(interaction);
         } catch (err) {
-            this.deleteCooldown(interaction);
+            this.deleteCooldown(commandName, compositeId);
             throw err;
         }
 
-        this.deleteCooldownOnTimeout(interaction);
+        await this.deleteCooldownOnTimeout(commandName, compositeId);
     }
 }
