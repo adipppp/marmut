@@ -10,10 +10,10 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
-    getMusicPlayer,
     inVoiceChannel,
 } from "../../utils/functions";
 import { QueueView } from "../../views";
+import { musicPlayers } from "../../core/managers";
 
 export class QueueCommand implements Command {
     readonly cooldown: number;
@@ -103,7 +103,7 @@ export class QueueCommand implements Command {
         }
 
         const guildId = interaction.guildId!;
-        const player = getMusicPlayer(guildId);
+        const player = musicPlayers.get(guildId)!;
 
         if (!player.isPlaying()) {
             await interaction.reply({
@@ -135,12 +135,11 @@ export class QueueCommand implements Command {
         collector.on("collect", async (interaction: ButtonInteraction) => {
             try {
                 if (
-                    !(await this.validateUser(interaction, originalUserId)) ||
-                    !(await this.validatePreconditions(interaction))
-                )
-                    return;
-
-                await this.handleValidInteraction(interaction, view);
+                    (await this.validateUser(interaction, originalUserId)) &&
+                    (await this.validatePreconditions(interaction))
+                ) {
+                    await this.handleValidInteraction(interaction, view);
+                }
             } catch (err) {
                 console.error(err);
             }

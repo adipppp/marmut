@@ -8,10 +8,10 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
-    getMusicPlayer,
     inVoiceChannel,
 } from "../../utils/functions";
 import { getVoiceConnection } from "@discordjs/voice";
+import { musicPlayers } from "../../core/managers";
 
 export class LeaveCommand implements Command {
     readonly cooldown: number;
@@ -66,7 +66,7 @@ export class LeaveCommand implements Command {
 
         const guildId = interaction.guildId!;
 
-        const player = getMusicPlayer(guildId);
+        const player = musicPlayers.get(guildId)!;
         await player.stop();
 
         const connection = getVoiceConnection(guildId)!;

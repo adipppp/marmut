@@ -10,9 +10,9 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
-    getMusicPlayer,
     inVoiceChannel,
 } from "../../utils/functions";
+import { musicPlayers } from "../../core/managers";
 
 export class VolumeCommand implements Command {
     readonly cooldown: number;
@@ -73,7 +73,7 @@ export class VolumeCommand implements Command {
 
         const guild = interaction.guild!;
         const guildId = guild.id;
-        const player = getMusicPlayer(guildId);
+        const player = musicPlayers.get(guildId)!;
 
         const currentVolume = player.getVolume();
         const newVolume = interaction.options.getInteger("volume");

@@ -55,20 +55,24 @@ export class MusicPlayer {
             );
     }
 
-    private handleCurrentIndexChange() {
+    private getNextIndex() {
+        let nextIndex;
         if (
             this.songIdArray.length > 0 &&
             this.repeatMode === RepeatMode.Queue
         ) {
-            this.currentIndex =
-                (this.currentIndex + 1) % this.songIdArray.length;
+            nextIndex = (this.currentIndex + 1) % this.songIdArray.length;
         } else if (this.repeatMode !== RepeatMode.Song) {
-            this.currentIndex++;
+            nextIndex = this.currentIndex + 1;
+        } else {
+            nextIndex = this.currentIndex;
         }
+
+        return nextIndex;
     }
 
     private async handleIdleState() {
-        this.handleCurrentIndexChange();
+        this.currentIndex = this.getNextIndex();
 
         if (this.songIdArray.length === 0) {
             this.currentIndex = -1;

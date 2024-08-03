@@ -75,12 +75,14 @@ export class InteractionCreateHandler implements EventHandler {
         const compositeId = BigInt(userId) ^ BigInt(guildId);
 
         if (this.isOnCooldown(commandName, compositeId)) {
-            const duration =
-                this.getRemainingDuration(interaction).toPrecision(2);
-            await interaction.reply({
-                content: `Command is on cooldown. Please try again in ${duration} seconds.`,
-                ephemeral: true,
-            });
+            const remainingDuration = this.getRemainingDuration(interaction);
+            if (remainingDuration > 0) {
+                const durationString = remainingDuration.toPrecision(2);
+                await interaction.reply({
+                    content: `Command is on cooldown. Please try again in ${durationString} seconds.`,
+                    ephemeral: true,
+                });
+            }
             return;
         }
 

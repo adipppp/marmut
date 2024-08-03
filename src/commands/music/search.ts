@@ -13,13 +13,13 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientIsPlayingIn,
-    getMusicPlayer,
     inVoiceChannel,
 } from "../../utils/functions";
 import YouTube, { Video } from "youtube-sr";
 import { joinVoiceChannel } from "@discordjs/voice";
 import { Song } from "../../core/music";
 import { SearchView } from "../../views";
+import { musicPlayers } from "../../core/managers";
 
 export class SearchCommand implements Command {
     readonly cooldown: number;
@@ -94,10 +94,10 @@ export class SearchCommand implements Command {
         return true;
     }
 
-    private joinVoiceChannel(channel: VoiceBasedChannel) {
-        const guild = channel.guild;
+    private joinVoiceChannel(voiceChannel: VoiceBasedChannel) {
+        const guild = voiceChannel.guild;
         const guildId = guild.id;
-        const channelId = channel.id;
+        const channelId = voiceChannel.id;
         const adapterCreator = guild.voiceAdapterCreator;
 
         joinVoiceChannel({ guildId, channelId, adapterCreator });
@@ -145,12 +145,21 @@ export class SearchCommand implements Command {
 
         const customIdInt = parseInt(interaction.customId);
         const song = songs[customIdInt - 1];
-        const player = getMusicPlayer(guildId);
+        const player = musicPlayers.get(guildId)!;
         const currentIndex = player.getCurrentIndex();
         const embed = this.createPlayingEmbed(song, currentIndex);
 
         await interaction.deferReply();
-        await player.play(song, interaction.channel!);
+
+        try {
+            await player.play(song, interaction.channel!);
+        } catch {
+            await interaction.editReply(
+                "Bot is not connected to any voice channel."
+            );
+            return;
+        }
+
         await interaction.editReply({ embeds: [embed] });
     }
 

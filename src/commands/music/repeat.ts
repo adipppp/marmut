@@ -11,9 +11,9 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
-    getMusicPlayer,
     inVoiceChannel,
 } from "../../utils/functions";
+import { musicPlayers } from "../../core/managers";
 
 export class RepeatCommand implements Command {
     readonly cooldown: number;
@@ -72,46 +72,51 @@ export class RepeatCommand implements Command {
         return true;
     }
 
-    private createNoSwitchEmbed(mode: RepeatMode) {
-        let desc = null;
-        switch (mode) {
-            case RepeatMode.Off:
-                desc = ":repeat:  -  Current repeat mode: Off";
-                break;
-            case RepeatMode.Song:
-                desc = ":repeat_one:  -  Current repeat mode: Song";
-                break;
-            case RepeatMode.Queue:
-                desc = ":repeat:  -  Current repeat mode: Queue";
-                break;
+    private createModeInfoEmbed(mode: RepeatMode) {
+        let desc;
+        if (mode === RepeatMode.Off) {
+            desc = ":repeat:  -  Current repeat mode: Off";
+        } else if (mode === RepeatMode.Song) {
+            desc = ":repeat_one:  -  Current repeat mode: Song";
+        } else if (mode === RepeatMode.Queue) {
+            desc = ":repeat:  -  Current repeat mode: Queue";
         }
 
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)
-            .setDescription(desc);
+            .setDescription(desc!);
 
         return embed;
     }
 
     private createModeSwitchEmbed(mode: RepeatMode) {
-        let desc = null;
-        switch (mode) {
-            case RepeatMode.Off:
-                desc = ":x:  -  Repeat disabled";
-                break;
-            case RepeatMode.Song:
-                desc = ":repeat_one:  -  Song repeat enabled";
-                break;
-            case RepeatMode.Queue:
-                desc = ":repeat:  -  Queue repeat enabled";
-                break;
+        let desc;
+        if (mode === RepeatMode.Off) {
+            desc = ":x:  -  Repeat disabled";
+        } else if (mode === RepeatMode.Song) {
+            desc = ":repeat_one:  -  Song repeat enabled";
+        } else if (mode === RepeatMode.Queue) {
+            desc = ":repeat:  -  Queue repeat enabled";
         }
 
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)
-            .setDescription(desc);
+            .setDescription(desc!);
 
         return embed;
+    }
+
+    private createSameModeMessage(mode: RepeatMode) {
+        let message;
+        if (mode === RepeatMode.Off) {
+            message = "Repeat feature is already disabled.";
+        } else if (mode === RepeatMode.Song) {
+            message = 'Repeat mode is already set to "Song".';
+        } else if (mode === RepeatMode.Queue) {
+            message = 'Repeat mode is already set to "Queue".';
+        }
+
+        return message;
     }
 
     async run(interaction: ChatInputCommandInteraction) {
@@ -121,40 +126,26 @@ export class RepeatCommand implements Command {
 
         const inputMode = interaction.options.getString("mode");
         const guildId = interaction.guildId!;
-        const player = getMusicPlayer(guildId);
+        const player = musicPlayers.get(guildId)!;
+        const currentMode = player.getRepeatMode();
 
         if (inputMode === null) {
-            const mode = player.getRepeatMode();
-            const embed = this.createNoSwitchEmbed(mode);
+            const embed = this.createModeInfoEmbed(currentMode);
             await interaction.reply({ embeds: [embed] });
             return;
         }
 
-        const mode = inputMode as RepeatMode;
+        const newMode = inputMode as RepeatMode;
 
-        const currentMode = player.getRepeatMode();
-        if (currentMode === mode) {
-            if (mode === RepeatMode.Off)
-                await interaction.reply({
-                    content: "Repeat feature is already disabled.",
-                    ephemeral: true,
-                });
-            else if (mode === RepeatMode.Song)
-                await interaction.reply({
-                    content: 'Repeat mode is already set to "Song".',
-                    ephemeral: true,
-                });
-            else if (mode === RepeatMode.Queue)
-                await interaction.reply({
-                    content: 'Repeat mode is already set to "Queue"',
-                    ephemeral: true,
-                });
+        if (currentMode === newMode) {
+            const content = this.createSameModeMessage(newMode);
+            await interaction.reply({ content, ephemeral: true });
             return;
         }
 
-        player.setRepeatMode(mode);
+        player.setRepeatMode(newMode);
 
-        const embed = this.createModeSwitchEmbed(mode);
+        const embed = this.createModeSwitchEmbed(newMode);
         await interaction.reply({ embeds: [embed] });
     }
 }

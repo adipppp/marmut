@@ -10,9 +10,9 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
-    getMusicPlayer,
     inVoiceChannel,
 } from "../../utils/functions";
+import { musicPlayers } from "../../core/managers";
 
 export class RemoveCommand implements Command {
     readonly cooldown: number;
@@ -92,7 +92,7 @@ export class RemoveCommand implements Command {
         }
 
         const guildId = interaction.guildId!;
-        const player = getMusicPlayer(guildId);
+        const player = musicPlayers.get(guildId)!;
 
         if (!player.isPlaying()) {
             await interaction.reply({

@@ -11,12 +11,12 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientIsPlayingIn,
-    getMusicPlayer,
     inVoiceChannel,
 } from "../../utils/functions";
 import { joinVoiceChannel } from "@discordjs/voice";
 import YouTube, { Video } from "youtube-sr";
 import { Song } from "../../core/music";
+import { musicPlayers } from "../../core/managers";
 
 export class PlayCommand implements Command {
     readonly cooldown: number;
@@ -61,10 +61,7 @@ export class PlayCommand implements Command {
             return false;
         }
 
-        const channelId = member.voice.channelId!;
-        const voiceChannel = guild.channels.cache.get(
-            channelId
-        ) as VoiceBasedChannel;
+        const voiceChannel = member.voice.channel!;
 
         if (!voiceChannel.joinable) {
             await interaction.reply({
@@ -116,15 +113,14 @@ export class PlayCommand implements Command {
             return;
         }
 
-        await interaction.deferReply();
-
-        const guild = interaction.guild!;
-        const guildId = guild.id;
         const member = interaction.member as GuildMember;
+        const guild = interaction.guild!;
 
         if (!clientInSameVoiceChannelAs(member) && !clientIsPlayingIn(guild)) {
             this.joinVoiceChannel(member.voice.channel!);
         }
+
+        await interaction.deferReply();
 
         const query = interaction.options.getString("song", true);
         const result = await YouTube.searchOne(query);
@@ -134,11 +130,18 @@ export class PlayCommand implements Command {
             return;
         }
 
-        const player = getMusicPlayer(guildId);
+        const player = musicPlayers.get(interaction.guildId!)!;
         const song = this.createSong(result);
         const currentIndex = player.getCurrentIndex();
 
-        await player.play(song, interaction.channel!);
+        try {
+            await player.play(song, interaction.channel!);
+        } catch {
+            await interaction.editReply(
+                "Bot is not connected to any voice channel."
+            );
+            return;
+        }
 
         const embed = this.createEmbed(song, currentIndex);
         await interaction.editReply({ embeds: [embed] });
