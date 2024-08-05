@@ -3,6 +3,7 @@ import {
     ChatInputCommandInteraction,
     Colors,
     EmbedBuilder,
+    Events,
     GuildMember,
     SharedSlashCommand,
     SlashCommandBuilder,
@@ -20,6 +21,7 @@ import { joinVoiceChannel } from "@discordjs/voice";
 import { Song } from "../../core/music";
 import { SearchView } from "../../views";
 import { musicPlayers } from "../../core/managers";
+import EventEmitter, { once } from "events";
 
 export class SearchCommand implements Command {
     readonly cooldown: number;
@@ -135,29 +137,33 @@ export class SearchCommand implements Command {
         interaction: ButtonInteraction,
         songs: Song[]
     ) {
+        await interaction.deferReply();
+
         const guild = interaction.guild!;
-        const guildId = guild.id;
         const member = interaction.member as GuildMember;
 
         if (!clientInSameVoiceChannelAs(member) && !clientIsPlayingIn(guild)) {
             this.joinVoiceChannel(member.voice.channel!);
+            const client = interaction.client as unknown;
+            await once(client as EventEmitter, Events.VoiceStateUpdate);
         }
+
+        const guildId = guild.id;
+        const player = musicPlayers.get(guildId)!;
 
         const customIdInt = parseInt(interaction.customId);
         const song = songs[customIdInt - 1];
-        const player = musicPlayers.get(guildId)!;
+
         const currentIndex = player.getCurrentIndex();
         const embed = this.createPlayingEmbed(song, currentIndex);
 
-        await interaction.deferReply();
-
         try {
             await player.play(song, interaction.channel!);
-        } catch {
+        } catch (err) {
             await interaction.editReply(
                 "Bot is not connected to any voice channel."
             );
-            return;
+            throw err;
         }
 
         await interaction.editReply({ embeds: [embed] });
@@ -170,13 +176,6 @@ export class SearchCommand implements Command {
 
         await interaction.deferReply();
 
-        const guild = interaction.guild!;
-        const member = interaction.member as GuildMember;
-
-        if (!clientInSameVoiceChannelAs(member) && !clientIsPlayingIn(guild)) {
-            this.joinVoiceChannel(member.voice.channel!);
-        }
-
         const query = interaction.options.getString("query", true);
         const results = await YouTube.search(query, {
             limit: 10,
@@ -186,6 +185,15 @@ export class SearchCommand implements Command {
         if (results.length === 0) {
             await interaction.editReply("Search results returned nothing.");
             return;
+        }
+
+        const guild = interaction.guild!;
+        const member = interaction.member as GuildMember;
+
+        if (!clientInSameVoiceChannelAs(member) && !clientIsPlayingIn(guild)) {
+            this.joinVoiceChannel(member.voice.channel!);
+            const client = interaction.client as unknown;
+            await once(client as EventEmitter, Events.VoiceStateUpdate);
         }
 
         const songs = this.createSongs(results);
@@ -217,9 +225,12 @@ export class SearchCommand implements Command {
                 rows.forEach((row) =>
                     row.components.forEach((button) => button.setDisabled(true))
                 );
+
                 await interaction.message.edit({ components: rows });
 
-                await this.handleValidInteraction(interaction, songs);
+                if (await this.validatePreconditions(interaction)) {
+                    await this.handleValidInteraction(interaction, songs);
+                }
             } catch (err) {
                 console.error(err);
             }

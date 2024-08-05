@@ -183,7 +183,9 @@ export class MusicPlayer {
     }
 
     async stop(force?: boolean) {
-        await this.removeAllSongs();
+        if (this.songIdArray.length > 0) {
+            await this.removeAllSongs();
+        }
         const audioPlayer = this.getAudioPlayer();
         const stream = this.getAudioResource()?.playStream;
         const retval = audioPlayer !== null && audioPlayer.stop(force);

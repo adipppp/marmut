@@ -38,7 +38,7 @@ export class VoiceStateUpdateHandler implements EventHandler {
         if (oldState.channelId === null) {
             this.handleChannelJoin(guildId);
         } else if (newState.channelId === null) {
-            this.handleChannelLeave(guildId);
+            await this.handleChannelLeave(guildId);
         }
     }
 }

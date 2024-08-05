@@ -69,8 +69,8 @@ export class LeaveCommand implements Command {
         const player = musicPlayers.get(guildId)!;
         await player.stop();
 
-        const connection = getVoiceConnection(guildId)!;
-        connection.destroy();
+        const connection = getVoiceConnection(guildId);
+        connection?.destroy();
 
         await interaction.reply("Disconnected from the voice channel.");
     }

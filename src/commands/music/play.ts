@@ -2,6 +2,7 @@ import {
     ChatInputCommandInteraction,
     Colors,
     EmbedBuilder,
+    Events,
     GuildMember,
     SharedSlashCommand,
     SlashCommandBuilder,
@@ -17,6 +18,7 @@ import { joinVoiceChannel } from "@discordjs/voice";
 import YouTube, { Video } from "youtube-sr";
 import { Song } from "../../core/music";
 import { musicPlayers } from "../../core/managers";
+import EventEmitter, { once } from "events";
 
 export class PlayCommand implements Command {
     readonly cooldown: number;
@@ -113,13 +115,6 @@ export class PlayCommand implements Command {
             return;
         }
 
-        const member = interaction.member as GuildMember;
-        const guild = interaction.guild!;
-
-        if (!clientInSameVoiceChannelAs(member) && !clientIsPlayingIn(guild)) {
-            this.joinVoiceChannel(member.voice.channel!);
-        }
-
         await interaction.deferReply();
 
         const query = interaction.options.getString("song", true);
@@ -130,17 +125,31 @@ export class PlayCommand implements Command {
             return;
         }
 
-        const player = musicPlayers.get(interaction.guildId!)!;
+        if (!(await this.validatePreconditions(interaction))) {
+            return;
+        }
+
+        const member = interaction.member as GuildMember;
+        const guild = interaction.guild!;
+
+        if (!clientInSameVoiceChannelAs(member) && !clientIsPlayingIn(guild)) {
+            this.joinVoiceChannel(member.voice.channel!);
+            const client = interaction.client as unknown;
+            await once(client as EventEmitter, Events.VoiceStateUpdate);
+        }
+
+        const guildId = guild.id;
+        const player = musicPlayers.get(guildId)!;
         const song = this.createSong(result);
         const currentIndex = player.getCurrentIndex();
 
         try {
             await player.play(song, interaction.channel!);
-        } catch {
+        } catch (err) {
             await interaction.editReply(
                 "Bot is not connected to any voice channel."
             );
-            return;
+            throw err;
         }
 
         const embed = this.createEmbed(song, currentIndex);
