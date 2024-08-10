@@ -3,15 +3,16 @@ import {
     GuildMember,
     SharedSlashCommand,
     SlashCommandBuilder,
-    VoiceBasedChannel,
 } from "discord.js";
 import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientIsPlayingIn,
+    getValidationErrorMessage,
     inVoiceChannel,
 } from "../../utils/functions";
 import { joinVoiceChannel } from "@discordjs/voice";
+import { ValidationError, ValidationErrorCode } from "../../errors";
 
 export class JoinCommand implements Command {
     readonly cooldown: number;
@@ -42,64 +43,53 @@ export class JoinCommand implements Command {
             const channelFromCache = guild.channels.cache.get(channelId)!;
 
             if (!channelFromCache.isVoiceBased()) {
-                await interaction.reply({
-                    content: "The channel specified is not a voice channel.",
-                    ephemeral: true,
+                throw new ValidationError({
+                    code: ValidationErrorCode.INVALID_VOICE_CHANNEL,
                 });
-                return false;
             }
         } else {
             const member = interaction.member as GuildMember;
 
             if (!inVoiceChannel(member)) {
-                await interaction.reply({
-                    content:
-                        "You need to specify or be in a voice channel to use this command.",
-                    ephemeral: true,
+                throw new ValidationError({
+                    code: ValidationErrorCode.MISSING_VOICE_CHANNEL,
                 });
-                return false;
             }
         }
 
         return true;
     }
 
-    private async validatePreconditions(
-        interaction: ChatInputCommandInteraction
-    ) {
-        if (!(await this.validateArgs(interaction))) {
-            return false;
-        }
+    private validatePreconditions(interaction: ChatInputCommandInteraction) {
+        this.validateArgs(interaction);
 
         const guild = interaction.guild!;
         const member = interaction.member as GuildMember;
 
         if (!clientInSameVoiceChannelAs(member) && clientIsPlayingIn(guild)) {
-            await interaction.reply({
-                content: "You need to be in the same voice channel as the bot.",
-                ephemeral: true,
+            throw new ValidationError({
+                code: ValidationErrorCode.MEMBER_NOT_IN_SAME_VOICE,
             });
-            return false;
         }
 
-        const channelId = member.voice.channelId!;
-        const voiceChannel = guild.channels.cache.get(
-            channelId
-        ) as VoiceBasedChannel;
+        const voiceChannel = member.voice.channel!;
 
         if (!voiceChannel.joinable) {
-            await interaction.reply({
-                content: "Unable to connect to the voice channel.",
-                ephemeral: true,
+            throw new ValidationError({
+                code: ValidationErrorCode.NON_JOINABLE_VOICE_CHANNEL,
             });
-            return false;
         }
-
-        return true;
     }
 
     async run(interaction: ChatInputCommandInteraction) {
-        if (!(await this.validatePreconditions(interaction))) {
+        try {
+            this.validatePreconditions(interaction);
+        } catch (err) {
+            console.error(err);
+            if (err instanceof ValidationError) {
+                const content = getValidationErrorMessage(err);
+                await interaction.reply({ content, ephemeral: true });
+            }
             return;
         }
 

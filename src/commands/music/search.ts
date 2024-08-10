@@ -14,6 +14,7 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientIsPlayingIn,
+    getValidationErrorMessage,
     inVoiceChannel,
 } from "../../utils/functions";
 import YouTube, { Video } from "youtube-sr";
@@ -22,6 +23,7 @@ import { Song } from "../../core/music";
 import { SearchView } from "../../views";
 import { musicPlayers } from "../../core/managers";
 import EventEmitter, { once } from "events";
+import { ValidationError, ValidationErrorCode } from "../../errors";
 
 export class SearchCommand implements Command {
     readonly cooldown: number;
@@ -41,59 +43,42 @@ export class SearchCommand implements Command {
             );
     }
 
-    private async validatePreconditions(
+    private validatePreconditions(
         interaction: ButtonInteraction | ChatInputCommandInteraction
     ) {
         const guild = interaction.guild!;
         const member = interaction.member as GuildMember;
 
         if (!inVoiceChannel(member)) {
-            await interaction.reply({
-                content:
-                    "You need to be in a voice channel to use this command.",
-                ephemeral: true,
+            throw new ValidationError({
+                code: ValidationErrorCode.MEMBER_NOT_IN_VOICE,
             });
-            return false;
         }
 
         if (!clientInSameVoiceChannelAs(member) && clientIsPlayingIn(guild)) {
-            await interaction.reply({
-                content:
-                    "Bot is already playing a song in another voice channel.",
-                ephemeral: true,
+            throw new ValidationError({
+                code: ValidationErrorCode.MEMBER_NOT_IN_SAME_VOICE,
             });
-            return false;
         }
 
-        const channelId = member.voice.channelId!;
-        const voiceChannel = guild.channels.cache.get(
-            channelId
-        ) as VoiceBasedChannel;
+        const voiceChannel = member.voice.channel!;
 
         if (!voiceChannel.joinable) {
-            await interaction.reply({
-                content: "Unable to connect to the voice channel.",
-                ephemeral: true,
+            throw new ValidationError({
+                code: ValidationErrorCode.NON_JOINABLE_VOICE_CHANNEL,
             });
-            return false;
         }
-
-        return true;
     }
 
-    private async validateUser(
+    private validateUser(
         interaction: ButtonInteraction,
         originalUserId: Snowflake
     ) {
         if (interaction.user.id !== originalUserId) {
-            await interaction.reply({
-                content:
-                    "You cannot interact with this menu. Please create your own by using the /search command.",
-                ephemeral: true,
+            throw new ValidationError({
+                code: ValidationErrorCode.SEARCH_MENU_NOT_FOR_USER,
             });
-            return false;
         }
-        return true;
     }
 
     private joinVoiceChannel(voiceChannel: VoiceBasedChannel) {
@@ -170,7 +155,14 @@ export class SearchCommand implements Command {
     }
 
     async run(interaction: ChatInputCommandInteraction) {
-        if (!(await this.validatePreconditions(interaction))) {
+        try {
+            this.validatePreconditions(interaction);
+        } catch (err) {
+            console.error(err);
+            if (err instanceof ValidationError) {
+                const content = getValidationErrorMessage(err);
+                await interaction.reply({ content, ephemeral: true });
+            }
             return;
         }
 
@@ -214,11 +206,8 @@ export class SearchCommand implements Command {
 
         collector.on("collect", async (interaction: ButtonInteraction) => {
             try {
-                if (
-                    !(await this.validateUser(interaction, originalUserId)) ||
-                    !(await this.validatePreconditions(interaction))
-                )
-                    return;
+                this.validateUser(interaction, originalUserId);
+                this.validatePreconditions(interaction);
 
                 collector.stop();
 
@@ -226,13 +215,14 @@ export class SearchCommand implements Command {
                     row.components.forEach((button) => button.setDisabled(true))
                 );
 
-                await interaction.message.edit({ components: rows });
-
-                if (await this.validatePreconditions(interaction)) {
-                    await this.handleValidInteraction(interaction, songs);
-                }
+                interaction.message.edit({ components: rows });
+                await this.handleValidInteraction(interaction, songs);
             } catch (err) {
                 console.error(err);
+                if (err instanceof ValidationError) {
+                    const content = getValidationErrorMessage(err);
+                    await interaction.reply({ content, ephemeral: true });
+                }
             }
         });
     }

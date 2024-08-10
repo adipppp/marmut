@@ -12,12 +12,14 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientIsPlayingIn,
+    getValidationErrorMessage,
     inVoiceChannel,
 } from "../../utils/functions";
 import { joinVoiceChannel } from "@discordjs/voice";
 import YouTube, { Video } from "youtube-sr";
 import { Song } from "../../core/music";
 import { musicPlayers } from "../../core/managers";
+import { ValidationError, ValidationErrorCode } from "../../errors";
 import EventEmitter, { once } from "events";
 
 export class PlayCommand implements Command {
@@ -40,40 +42,29 @@ export class PlayCommand implements Command {
             );
     }
 
-    private async validatePreconditions(
-        interaction: ChatInputCommandInteraction
-    ) {
+    private validatePreconditions(interaction: ChatInputCommandInteraction) {
         const guild = interaction.guild!;
         const member = interaction.member as GuildMember;
 
         if (!inVoiceChannel(member)) {
-            await interaction.reply({
-                content:
-                    "You need to be in a voice channel to use this command.",
-                ephemeral: true,
+            throw new ValidationError({
+                code: ValidationErrorCode.MEMBER_NOT_IN_VOICE,
             });
-            return false;
         }
 
         if (!clientInSameVoiceChannelAs(member) && clientIsPlayingIn(guild)) {
-            await interaction.reply({
-                content: "You need to be in the same voice channel as the bot.",
-                ephemeral: true,
+            throw new ValidationError({
+                code: ValidationErrorCode.MEMBER_NOT_IN_SAME_VOICE,
             });
-            return false;
         }
 
         const voiceChannel = member.voice.channel!;
 
         if (!voiceChannel.joinable) {
-            await interaction.reply({
-                content: "Unable to connect to the voice channel.",
-                ephemeral: true,
+            throw new ValidationError({
+                code: ValidationErrorCode.NON_JOINABLE_VOICE_CHANNEL,
             });
-            return false;
         }
-
-        return true;
     }
 
     private joinVoiceChannel(channel: VoiceBasedChannel) {
@@ -111,7 +102,14 @@ export class PlayCommand implements Command {
     }
 
     async run(interaction: ChatInputCommandInteraction) {
-        if (!(await this.validatePreconditions(interaction))) {
+        try {
+            this.validatePreconditions(interaction);
+        } catch (err) {
+            console.error(err);
+            if (err instanceof ValidationError) {
+                const content = getValidationErrorMessage(err);
+                await interaction.reply({ content, ephemeral: true });
+            }
             return;
         }
 
@@ -122,10 +120,6 @@ export class PlayCommand implements Command {
 
         if (!result) {
             await interaction.editReply("Could not find the song.");
-            return;
-        }
-
-        if (!(await this.validatePreconditions(interaction))) {
             return;
         }
 
