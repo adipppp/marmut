@@ -11,6 +11,8 @@ import { Colors, EmbedBuilder, Snowflake, TextBasedChannel } from "discord.js";
 import ytdl from "@distube/ytdl-core";
 import { RepeatMode } from "../../enums";
 
+const MARMUT_ICON_40PX = process.env.MARMUT_ICON_40PX;
+
 export class MusicPlayer {
     private readonly guildId: Snowflake;
     private songIdArray: bigint[];
@@ -49,7 +51,7 @@ export class MusicPlayer {
             .setColor(Colors.Red)
             .setTimestamp()
             .setThumbnail(song.thumbnailUrl)
-            .setFooter({ text: "Marmut" })
+            .setFooter({ text: "Marmut", iconURL: MARMUT_ICON_40PX })
             .setDescription(
                 `:arrow_forward:  -  Now Playing\n[${song.title}](${song.videoUrl})`
             );

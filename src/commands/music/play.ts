@@ -22,6 +22,8 @@ import { musicPlayers } from "../../core/managers";
 import { ValidationError, ValidationErrorCode } from "../../errors";
 import EventEmitter, { once } from "events";
 
+const MARMUT_ICON_40PX = process.env.MARMUT_ICON_40PX;
+
 export class PlayCommand implements Command {
     readonly cooldown: number;
     readonly data: SharedSlashCommand;
@@ -97,7 +99,7 @@ export class PlayCommand implements Command {
             .setColor(Colors.Red)
             .setTimestamp()
             .setThumbnail(song.thumbnailUrl)
-            .setFooter({ text: "Marmut" })
+            .setFooter({ text: "Marmut", iconURL: MARMUT_ICON_40PX })
             .setDescription(description);
     }
 

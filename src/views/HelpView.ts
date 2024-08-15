@@ -1,6 +1,8 @@
 import { Collection, Colors, EmbedBuilder } from "discord.js";
 import { marmut } from "../core/client";
 
+const MARMUT_ICON_40PX = process.env.MARMUT_ICON_40PX;
+
 export class HelpView {
     private readonly embed: EmbedBuilder;
     private static _instance?: HelpView;
@@ -13,7 +15,7 @@ export class HelpView {
         const embed = new EmbedBuilder()
             .setTitle("List of Commands")
             .setColor(Colors.Red)
-            .setFooter({ text: "Marmut" })
+            .setFooter({ text: "Marmut", iconURL: MARMUT_ICON_40PX })
             .setTimestamp();
 
         const commands = marmut.commands;

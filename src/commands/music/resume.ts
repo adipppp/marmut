@@ -17,6 +17,8 @@ import { Song } from "../../core/music";
 import { musicPlayers } from "../../core/managers";
 import { ValidationError, ValidationErrorCode } from "../../errors";
 
+const MARMUT_ICON_40PX = process.env.MARMUT_ICON_40PX;
+
 export class ResumeCommand implements Command {
     readonly cooldown: number;
     readonly data: SharedSlashCommand;
@@ -57,7 +59,7 @@ export class ResumeCommand implements Command {
             .setColor(Colors.Red)
             .setTimestamp()
             .setThumbnail(song.thumbnailUrl)
-            .setFooter({ text: "Marmut" })
+            .setFooter({ text: "Marmut", iconURL: MARMUT_ICON_40PX })
             .setDescription(
                 `:arrow_forward:  -  Now Playing\n[${song.title}](${song.videoUrl})`
             );

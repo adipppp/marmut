@@ -15,12 +15,10 @@ const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
 class MarmutClient extends Client {
-    private static instance: MarmutClient;
     readonly commands: Collection<string, Command>;
 
     constructor(options: ClientOptions) {
         super(options);
-        MarmutClient.instance = this;
         this.commands = new Collection();
     }
 
@@ -107,10 +105,6 @@ class MarmutClient extends Client {
         });
 
         return super.login(token);
-    }
-
-    static getInstance() {
-        return MarmutClient.instance;
     }
 }
 
