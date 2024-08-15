@@ -57,7 +57,7 @@ export class ResumeCommand implements Command {
             .setColor(Colors.Red)
             .setTimestamp()
             .setThumbnail(song.thumbnailUrl)
-            .setFooter({ text: "Dek Depe" })
+            .setFooter({ text: "Marmut" })
             .setDescription(
                 `:arrow_forward:  -  Now Playing\n[${song.title}](${song.videoUrl})`
             );
@@ -67,10 +67,11 @@ export class ResumeCommand implements Command {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            console.error(err);
             if (err instanceof ValidationError) {
                 const content = getValidationErrorMessage(err);
                 await interaction.reply({ content, ephemeral: true });
+            } else {
+                console.error(err);
             }
             return;
         }

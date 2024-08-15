@@ -90,10 +90,11 @@ export class QueueCommand implements Command {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            console.error(err);
             if (err instanceof ValidationError) {
                 const content = getValidationErrorMessage(err);
                 await interaction.reply({ content, ephemeral: true });
+            } else {
+                console.error(err);
             }
             return;
         }
@@ -134,10 +135,11 @@ export class QueueCommand implements Command {
                 this.validatePreconditions(interaction);
                 await this.handleValidInteraction(interaction, view);
             } catch (err) {
-                console.error(err);
                 if (err instanceof ValidationError) {
                     const content = getValidationErrorMessage(err);
                     await interaction.reply({ content, ephemeral: true });
+                } else {
+                    console.error(err);
                 }
             }
         });
