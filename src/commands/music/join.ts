@@ -1,5 +1,7 @@
 import {
     ChatInputCommandInteraction,
+    Colors,
+    EmbedBuilder,
     GuildMember,
     SharedSlashCommand,
     SlashCommandBuilder,
@@ -13,6 +15,8 @@ import {
 } from "../../utils/functions";
 import { joinVoiceChannel } from "@discordjs/voice";
 import { ValidationError, ValidationErrorCode } from "../../errors";
+
+const JOIN_EMOJI = process.env.JOIN_EMOJI;
 
 export class JoinCommand implements Command {
     readonly cooldown: number;
@@ -119,6 +123,10 @@ export class JoinCommand implements Command {
 
         joinVoiceChannel({ guildId, channelId, adapterCreator });
 
-        await interaction.reply("Connected to the voice channel.");
+        const embed = new EmbedBuilder()
+            .setColor(Colors.Red)
+            .setDescription(`${JOIN_EMOJI}  -  Connected to the voice channel`);
+
+        await interaction.reply({ embeds: [embed] });
     }
 }

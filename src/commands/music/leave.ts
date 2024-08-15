@@ -1,5 +1,7 @@
 import {
     ChatInputCommandInteraction,
+    Colors,
+    EmbedBuilder,
     GuildMember,
     SharedSlashCommand,
     SlashCommandBuilder,
@@ -14,6 +16,8 @@ import {
 import { getVoiceConnection } from "@discordjs/voice";
 import { musicPlayers } from "../../core/managers";
 import { ValidationError, ValidationErrorCode } from "../../errors";
+
+const LEAVE_EMOJI = process.env.LEAVE_EMOJI;
 
 export class LeaveCommand implements Command {
     readonly cooldown: number;
@@ -71,6 +75,12 @@ export class LeaveCommand implements Command {
         const connection = getVoiceConnection(guildId);
         connection?.destroy();
 
-        await interaction.reply("Disconnected from the voice channel.");
+        const embed = new EmbedBuilder()
+            .setColor(Colors.Red)
+            .setDescription(
+                `${LEAVE_EMOJI}  -  Disconnected from the voice channel`
+            );
+
+        await interaction.reply({ embeds: [embed] });
     }
 }
