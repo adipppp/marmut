@@ -5,6 +5,7 @@ import {
 } from "discord.js";
 
 export interface Command {
+    category?: string;
     cooldown: number;
     data: SharedSlashCommand;
     run(interaction: ChatInputCommandInteraction): void | Promise<void>;
