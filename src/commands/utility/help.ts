@@ -15,12 +15,22 @@ export class HelpCommand implements Command {
         this.data = new SlashCommandBuilder()
             .setName("help")
             .setDescription("Displays the list of available commands.")
-            .setDMPermission(false);
+            .setDMPermission(false)
+            .addStringOption((builder) =>
+                builder
+                    .setName("command")
+                    .setDescription(
+                        "The command whose help page will be fetched."
+                    )
+                    .setRequired(false)
+            );
     }
 
     async run(interaction: ChatInputCommandInteraction) {
+        const command = interaction.options.getString("command");
         const view = HelpView.instance;
-        const embed = view.getEmbed();
+        const embed = view.getEmbed(command);
+
         await interaction.reply({ embeds: [embed] });
     }
 }
