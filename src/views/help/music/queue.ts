@@ -2,7 +2,7 @@ import { APIEmbedField } from "discord.js";
 import { CommandHelpView } from "../..";
 
 const TITLE = "Queue";
-const DESCRIPTION = "Displays the song queue and the now-playing song.";
+const DESCRIPTION = "Displays the song queue and the currently playing song.";
 const FIELDS: APIEmbedField[] = [{ name: "Usage", value: "`/queue`" }];
 
 class QueueCommandHelpView extends CommandHelpView {

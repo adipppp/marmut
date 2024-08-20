@@ -78,6 +78,14 @@ export class PlayCommand implements Command {
         joinVoiceChannel({ guildId, channelId, adapterCreator });
     }
 
+    private async getVideo(query: string) {
+        if (YouTube.validate(query, "VIDEO")) {
+            return await YouTube.getVideo(query);
+        } else {
+            return await YouTube.searchOne(query);
+        }
+    }
+
     private createSong(video: Video) {
         return new Song({
             title: video.title!,
@@ -118,7 +126,7 @@ export class PlayCommand implements Command {
         await interaction.deferReply();
 
         const query = interaction.options.getString("song", true);
-        const result = await YouTube.searchOne(query);
+        const result = await this.getVideo(query);
 
         if (!result) {
             await interaction.editReply("Could not find the song.");
