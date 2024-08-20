@@ -24,7 +24,7 @@ export class PauseCommand implements Command {
         this.cooldown = 1;
         this.data = new SlashCommandBuilder()
             .setName("pause")
-            .setDescription("Pauses the music player. Use /resume to unpause.")
+            .setDescription("Pauses the current song.")
             .setDMPermission(false);
     }
 
@@ -55,12 +55,11 @@ export class PauseCommand implements Command {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (err instanceof ValidationError) {
-                const content = getValidationErrorMessage(err);
-                await interaction.reply({ content, ephemeral: true });
-            } else {
-                console.error(err);
+            if (!(err instanceof ValidationError)) {
+                throw err;
             }
+            const content = getValidationErrorMessage(err);
+            await interaction.reply({ content, ephemeral: true });
             return;
         }
 
@@ -76,7 +75,7 @@ export class PauseCommand implements Command {
 
         if (!player.pause()) {
             await interaction.reply({
-                content: "Music player is already paused.",
+                content: "Song is already paused.",
                 ephemeral: true,
             });
             return;
@@ -84,7 +83,7 @@ export class PauseCommand implements Command {
 
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)
-            .setDescription(":pause_button:  -  Music player paused");
+            .setDescription(":pause_button:  -  Song paused");
 
         await interaction.reply({ embeds: [embed] });
     }

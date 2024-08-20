@@ -160,12 +160,11 @@ export class SearchCommand implements Command {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (err instanceof ValidationError) {
-                const content = getValidationErrorMessage(err);
-                await interaction.reply({ content, ephemeral: true });
-            } else {
-                console.error(err);
+            if (!(err instanceof ValidationError)) {
+                throw err;
             }
+            const content = getValidationErrorMessage(err);
+            await interaction.reply({ content, ephemeral: true });
             return;
         }
 
@@ -221,13 +220,11 @@ export class SearchCommand implements Command {
                 interaction.message.edit({ components: rows });
                 await this.handleValidInteraction(interaction, songs);
             } catch (err) {
-                if (err instanceof ValidationError) {
-                    const content = getValidationErrorMessage(err);
-                    await interaction.reply({ content, ephemeral: true });
-                } else {
-                    console.error(err);
+                if (!(err instanceof ValidationError)) {
+                    throw err;
                 }
-                return;
+                const content = getValidationErrorMessage(err);
+                await interaction.reply({ content, ephemeral: true });
             }
         });
     }

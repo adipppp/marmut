@@ -89,12 +89,11 @@ export class JoinCommand implements Command {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (err instanceof ValidationError) {
-                const content = getValidationErrorMessage(err);
-                await interaction.reply({ content, ephemeral: true });
-            } else {
-                console.error(err);
+            if (!(err instanceof ValidationError)) {
+                throw err;
             }
+            const content = getValidationErrorMessage(err);
+            await interaction.reply({ content, ephemeral: true });
             return;
         }
 

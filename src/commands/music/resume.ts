@@ -27,7 +27,7 @@ export class ResumeCommand implements Command {
         this.cooldown = 1;
         this.data = new SlashCommandBuilder()
             .setName("resume")
-            .setDescription("Resumes the music player.")
+            .setDescription("Resumes the current song.")
             .setDMPermission(false);
     }
 
@@ -69,12 +69,11 @@ export class ResumeCommand implements Command {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (err instanceof ValidationError) {
-                const content = getValidationErrorMessage(err);
-                await interaction.reply({ content, ephemeral: true });
-            } else {
-                console.error(err);
+            if (!(err instanceof ValidationError)) {
+                throw err;
             }
+            const content = getValidationErrorMessage(err);
+            await interaction.reply({ content, ephemeral: true });
             return;
         }
 
@@ -90,7 +89,7 @@ export class ResumeCommand implements Command {
 
         if (!player.unpause()) {
             await interaction.reply({
-                content: "Music player is already playing.",
+                content: "Song is not paused.",
                 ephemeral: true,
             });
             return;

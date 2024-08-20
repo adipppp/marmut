@@ -83,8 +83,9 @@ class MarmutClient extends Client {
 
             for (const file of commandFiles) {
                 const command = await import(path.join(folderPath, file));
-                const instance = new command[Object.keys(command)[0]]();
-                instance.category = item;
+                const instance: Command = new command[
+                    Object.keys(command)[0]
+                ]();
                 this.commands.set(instance.data.name, instance);
             }
         }

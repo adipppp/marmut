@@ -3,6 +3,7 @@ import { Colors, EmbedBuilder } from "discord.js";
 const MARMUT_ICON_40PX = process.env.MARMUT_ICON_40PX;
 
 export abstract class CommandHelpView {
+    abstract readonly commandName: string;
     protected readonly embed: EmbedBuilder;
 
     constructor() {

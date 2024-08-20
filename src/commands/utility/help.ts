@@ -4,7 +4,7 @@ import {
     SlashCommandBuilder,
 } from "discord.js";
 import { Command } from "../../types";
-import { HelpView } from "../../views";
+import { helpView } from "../../views";
 
 export class HelpCommand implements Command {
     readonly cooldown: number;
@@ -28,8 +28,16 @@ export class HelpCommand implements Command {
 
     async run(interaction: ChatInputCommandInteraction) {
         const command = interaction.options.getString("command");
-        const view = HelpView.instance;
-        const embed = view.getEmbed(command);
+        const embed = helpView.getEmbed(command?.trim().toLowerCase());
+
+        if (embed === undefined) {
+            await interaction.reply({
+                content:
+                    "The help page for the specified command was not found.",
+                ephemeral: true,
+            });
+            return;
+        }
 
         await interaction.reply({ embeds: [embed] });
     }

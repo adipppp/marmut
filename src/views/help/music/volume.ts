@@ -1,5 +1,5 @@
 import { APIEmbedField } from "discord.js";
-import { CommandHelpView } from "../CommandHelpView";
+import { CommandHelpView } from "../..";
 
 const TITLE = "Volume";
 const DESCRIPTION =
@@ -8,12 +8,17 @@ const FIELDS: APIEmbedField[] = [
     { name: "Usage", value: "`/volume [volume]`" },
 ];
 
-export class VolumeCommandHelpView extends CommandHelpView {
+class VolumeCommandHelpView extends CommandHelpView {
+    readonly commandName: string;
+
     constructor() {
         super();
+        this.commandName = TITLE.toLowerCase();
         this.embed
             .setTitle(TITLE)
             .setDescription(DESCRIPTION)
             .addFields(FIELDS);
     }
 }
+
+export default new VolumeCommandHelpView();

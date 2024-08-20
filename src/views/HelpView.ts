@@ -1,45 +1,62 @@
 import { Collection, Colors, EmbedBuilder } from "discord.js";
 import fs from "fs";
 import path from "path";
-import { marmut } from "../core/client";
 import { CommandHelpView } from "./CommandHelpView";
 
 const MARMUT_ICON_40PX = process.env.MARMUT_ICON_40PX;
 
 export class HelpView {
-    private static _instance?: HelpView;
+    private readonly commandHelpViews: Collection<string, CommandHelpView>;
     private readonly embed: EmbedBuilder;
-    private readonly helpPages: Collection<string, CommandHelpView>;
 
     constructor() {
+        this.commandHelpViews = this.createCommandHelpViews();
         this.embed = this.createEmbed();
-        this.helpPages = this.createHelpPages();
+    }
+
+    private isDirectory(item: string) {
+        return fs.statSync(item).isDirectory();
+    }
+
+    private isJavascriptFile(item: string) {
+        return item.endsWith(".js") && fs.statSync(item).isFile();
     }
 
     private createFields() {
-        const commands = marmut.commands;
+        const categoriesPath = path.join(__dirname, "help");
+        const categoriesArray = fs
+            .readdirSync(categoriesPath)
+            .filter((item) =>
+                this.isDirectory(path.join(categoriesPath, item))
+            );
 
-        const categories = commands.reduce(
-            (categories, command, commandName) => {
-                let category = categories.get(command.category!);
-                if (category === undefined) {
-                    category = [];
-                    categories.set(command.category!, category);
-                }
-                category.push(`\`${commandName}\``);
-                return categories;
-            },
-            new Collection<string, string[]>()
-        );
+        const categories = new Collection<string, string[]>();
 
-        const fields = categories.map((commandNames, category) => ({
+        for (const category of categoriesArray) {
+            const commandHelpViewsPath = path.join(categoriesPath, category);
+            const commandNames = fs
+                .readdirSync(commandHelpViewsPath)
+                .map((item) => path.join(commandHelpViewsPath, item))
+                .filter(this.isJavascriptFile)
+                .map((commandHelpViewPath) => {
+                    const importedObject = require(commandHelpViewPath);
+                    const commandHelpView =
+                        importedObject[Object.keys(importedObject)[0]];
+                    return commandHelpView.commandName;
+                });
+
+            categories.set(category, commandNames);
+        }
+
+        return categories.map((commandNames, category) => ({
             name: `**${
                 category.slice(0, 1).toUpperCase() + category.slice(1)
             }**`,
-            value: commandNames.sort().join(", "),
+            value: commandNames
+                .sort()
+                .map((commandName) => `\`${commandName}\``)
+                .join(", "),
         }));
-
-        return fields;
     }
 
     private createEmbed() {
@@ -56,49 +73,41 @@ export class HelpView {
         return embed;
     }
 
-    private createHelpPages() {
-        const helpPages = new Collection<string, CommandHelpView>();
-
-        const helpFilesPath = path.join(__dirname, "help");
-        const helpFiles = fs
-            .readdirSync(helpFilesPath)
-            .filter(
-                (file) =>
-                    file.endsWith(".js") &&
-                    fs.statSync(path.join(helpFilesPath, file)).isFile()
+    private createCommandHelpViews() {
+        const categoriesPath = path.join(__dirname, "help");
+        const categories = fs
+            .readdirSync(categoriesPath)
+            .filter((item) =>
+                this.isDirectory(path.join(categoriesPath, item))
             );
 
-        for (const file of helpFiles) {
-            const commandHelpView = require(path.join(helpFilesPath, file));
-            const instance = new commandHelpView[
-                Object.keys(commandHelpView)[0]
-            ]();
-            helpPages.set(file.slice(0, file.length - 3), instance);
-        }
+        const commandHelpViewsArray: CommandHelpView[] = categories
+            .map((category) =>
+                fs
+                    .readdirSync(path.join(categoriesPath, category))
+                    .map((item) => path.join(categoriesPath, category, item))
+                    .filter(this.isJavascriptFile)
+            )
+            .flat()
+            .map((commandHelpViewPath) => {
+                const importedObject = require(commandHelpViewPath);
+                return importedObject[Object.keys(importedObject)[0]];
+            });
 
-        return helpPages;
+        return commandHelpViewsArray.reduce(
+            (acc, view) => acc.set(view.commandName, view),
+            new Collection<string, CommandHelpView>()
+        );
     }
 
-    getEmbed(commandName: string | null) {
-        if (commandName !== null) {
-            const helpPage = this.helpPages.get(commandName);
-            if (helpPage === undefined) {
-                throw new Error(`Help page for ${commandName} not found`);
-            }
-            return helpPage.getEmbed();
-        } else {
+    getEmbed(commandName?: string) {
+        if (commandName === undefined) {
             return this.embed;
+        } else {
+            const helpPage = this.commandHelpViews.get(commandName);
+            return helpPage?.getEmbed();
         }
-    }
-
-    getHelpPage(commandName: string) {
-        return this.helpPages.get(commandName);
-    }
-
-    static get instance() {
-        if (HelpView._instance === undefined) {
-            HelpView._instance = new HelpView();
-        }
-        return HelpView._instance;
     }
 }
+
+export const helpView = new HelpView();
