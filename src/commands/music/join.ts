@@ -9,6 +9,7 @@ import {
 import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
+    clientInVoiceChannelOf,
     clientIsPlayingIn,
     getValidationErrorMessage,
     inVoiceChannel,
@@ -70,7 +71,10 @@ export class JoinCommand implements Command {
         const guild = interaction.guild!;
         const member = interaction.member as GuildMember;
 
-        if (!clientInSameVoiceChannelAs(member) && clientIsPlayingIn(guild)) {
+        const clientInSameVoiceChannelAsMember =
+            clientInSameVoiceChannelAs(member);
+
+        if (!clientInSameVoiceChannelAsMember && clientIsPlayingIn(guild)) {
             throw new ValidationError({
                 code: ValidationErrorCode.MEMBER_NOT_IN_SAME_VOICE,
             });
@@ -78,7 +82,7 @@ export class JoinCommand implements Command {
 
         const voiceChannel = member.voice.channel!;
 
-        if (!voiceChannel.joinable) {
+        if (!clientInSameVoiceChannelAsMember && !voiceChannel.joinable) {
             throw new ValidationError({
                 code: ValidationErrorCode.NON_JOINABLE_VOICE_CHANNEL,
             });

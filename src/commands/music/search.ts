@@ -57,7 +57,10 @@ export class SearchCommand implements Command {
             });
         }
 
-        if (!clientInSameVoiceChannelAs(member) && clientIsPlayingIn(guild)) {
+        const clientInSameVoiceChannelAsMember =
+            clientInSameVoiceChannelAs(member);
+
+        if (!clientInSameVoiceChannelAsMember && clientIsPlayingIn(guild)) {
             throw new ValidationError({
                 code: ValidationErrorCode.MEMBER_NOT_IN_SAME_VOICE,
             });
@@ -65,7 +68,7 @@ export class SearchCommand implements Command {
 
         const voiceChannel = member.voice.channel!;
 
-        if (!voiceChannel.joinable) {
+        if (!clientInSameVoiceChannelAsMember && !voiceChannel.joinable) {
             throw new ValidationError({
                 code: ValidationErrorCode.NON_JOINABLE_VOICE_CHANNEL,
             });
