@@ -93,13 +93,18 @@ class MarmutClient extends Client {
 
     async login(token: string) {
         await this.loadCommands();
-        await this.registerCommands();
+        // await this.registerCommands();
         await this.registerListeners();
 
         const destroy = this.destroy.bind(this);
         process.on("beforeExit", destroy);
         process.on("SIGINT", destroy);
         process.on("uncaughtException", async (err) => {
+            console.error(err);
+            await destroy();
+            process.exit(1);
+        });
+        process.on("unhandledRejection", async (err) => {
             console.error(err);
             await destroy();
             process.exit(1);

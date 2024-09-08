@@ -21,3 +21,9 @@ process.on("uncaughtException", async (err) => {
     await cleanup(prisma);
     process.exit(1);
 });
+
+process.on("unhandledRejection", async (err) => {
+    console.error(err);
+    await cleanup(prisma);
+    process.exit(1);
+});
