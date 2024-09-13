@@ -7,7 +7,13 @@ import {
 } from "@discordjs/voice";
 import { marmut, prisma } from "../client";
 import { Song } from "./Song";
-import { Colors, EmbedBuilder, Snowflake, TextBasedChannel } from "discord.js";
+import {
+    Colors,
+    EmbedBuilder,
+    SendableChannels,
+    Snowflake,
+    TextBasedChannel,
+} from "discord.js";
 import ytdl from "@distube/ytdl-core";
 import { RepeatMode } from "../../enums";
 
@@ -95,7 +101,7 @@ export class MusicPlayer {
 
             const channel = marmut.channels.cache.get(
                 this.textChannelId!
-            ) as TextBasedChannel;
+            ) as SendableChannels;
 
             await this.playSong(nextSong);
 
