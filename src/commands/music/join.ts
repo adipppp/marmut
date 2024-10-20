@@ -9,7 +9,6 @@ import {
 import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
-    clientInVoiceChannelOf,
     clientIsPlayingIn,
     getValidationErrorMessage,
     inVoiceChannel,
