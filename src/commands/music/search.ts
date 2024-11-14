@@ -1,31 +1,27 @@
 import {
     ButtonInteraction,
     ChatInputCommandInteraction,
-    Colors,
-    EmbedBuilder,
-    Events,
     GuildMember,
     SharedSlashCommand,
     SlashCommandBuilder,
     Snowflake,
-    VoiceBasedChannel,
 } from "discord.js";
+import YouTube, { Video } from "youtube-sr";
+import { Song } from "../../core/music";
+import { SearchView } from "../../views";
+import { musicPlayers } from "../../core/managers";
+import { ValidationErrorCode } from "../../enums";
+import { ValidationError } from "../../errors";
 import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientIsPlayingIn,
+    createAddedToQueueEmbed,
+    createNowPlayingEmbed,
     getValidationErrorMessage,
     inVoiceChannel,
+    joinVoiceChannel,
 } from "../../utils/functions";
-import YouTube, { Video } from "youtube-sr";
-import { joinVoiceChannel } from "@discordjs/voice";
-import { Song } from "../../core/music";
-import { SearchView } from "../../views";
-import { musicPlayers } from "../../core/managers";
-import EventEmitter, { once } from "events";
-import { ValidationError, ValidationErrorCode } from "../../errors";
-
-const MARMUT_ICON_40PX = process.env.MARMUT_ICON_40PX;
 
 export class SearchCommand implements Command {
     readonly cooldown: number;
@@ -86,15 +82,6 @@ export class SearchCommand implements Command {
         }
     }
 
-    private joinVoiceChannel(voiceChannel: VoiceBasedChannel) {
-        const guild = voiceChannel.guild;
-        const guildId = guild.id;
-        const channelId = voiceChannel.id;
-        const adapterCreator = guild.voiceAdapterCreator;
-
-        joinVoiceChannel({ guildId, channelId, adapterCreator });
-    }
-
     private createSongs(results: Video[]) {
         return results.map(
             (result) =>
@@ -107,20 +94,12 @@ export class SearchCommand implements Command {
         );
     }
 
-    private createPlayingEmbed(song: Song, currentIndex: number) {
-        let description;
+    private createEmbed(song: Song, currentIndex: number) {
         if (currentIndex === -1) {
-            description = `:arrow_forward:  -  Now Playing\n[${song.title}](${song.videoUrl})`;
+            return createNowPlayingEmbed(song);
         } else {
-            description = `:white_check_mark:  -  Added to queue\n[${song.title}](${song.videoUrl})`;
+            return createAddedToQueueEmbed(song);
         }
-
-        return new EmbedBuilder()
-            .setColor(Colors.Red)
-            .setTimestamp()
-            .setThumbnail(song.thumbnailUrl)
-            .setFooter({ text: "Marmut", iconURL: MARMUT_ICON_40PX })
-            .setDescription(description);
     }
 
     private async handleValidInteraction(
@@ -133,9 +112,7 @@ export class SearchCommand implements Command {
         const member = interaction.member as GuildMember;
 
         if (!clientInSameVoiceChannelAs(member) && !clientIsPlayingIn(guild)) {
-            this.joinVoiceChannel(member.voice.channel!);
-            const client = interaction.client as unknown;
-            await once(client as EventEmitter, Events.VoiceStateUpdate);
+            await joinVoiceChannel(member.voice.channel!);
         }
 
         const guildId = guild.id;
@@ -145,7 +122,7 @@ export class SearchCommand implements Command {
         const song = songs[customIdInt - 1];
 
         const currentIndex = player.getCurrentIndex();
-        const embed = this.createPlayingEmbed(song, currentIndex);
+        const embed = this.createEmbed(song, currentIndex);
 
         try {
             await player.play(song, interaction.channel!);
@@ -188,9 +165,7 @@ export class SearchCommand implements Command {
         const member = interaction.member as GuildMember;
 
         if (!clientInSameVoiceChannelAs(member) && !clientIsPlayingIn(guild)) {
-            this.joinVoiceChannel(member.voice.channel!);
-            const client = interaction.client as unknown;
-            await once(client as EventEmitter, Events.VoiceStateUpdate);
+            await joinVoiceChannel(member.voice.channel!);
         }
 
         const songs = this.createSongs(results);

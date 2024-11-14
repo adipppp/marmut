@@ -14,7 +14,8 @@ import {
     inVoiceChannel,
 } from "../../utils/functions";
 import { musicPlayers } from "../../core/managers";
-import { ValidationError, ValidationErrorCode } from "../../errors";
+import { ValidationErrorCode } from "../../enums";
+import { ValidationError } from "../../errors";
 
 export class PauseCommand implements Command {
     readonly cooldown: number;
@@ -73,7 +74,7 @@ export class PauseCommand implements Command {
             return;
         }
 
-        if (!player.pause()) {
+        if (!(await player.pause())) {
             await interaction.reply({
                 content: "Song is already paused.",
                 ephemeral: true,

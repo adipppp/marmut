@@ -14,7 +14,8 @@ import {
     inVoiceChannel,
 } from "../../utils/functions";
 import { musicPlayers } from "../../core/managers";
-import { ValidationError, ValidationErrorCode } from "../../errors";
+import { ValidationErrorCode } from "../../enums";
+import { ValidationError } from "../../errors";
 
 export class VolumeCommand implements Command {
     readonly cooldown: number;
@@ -94,7 +95,7 @@ export class VolumeCommand implements Command {
             return;
         }
 
-        player.setVolume(newVolume);
+        await player.setVolume(newVolume);
 
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)

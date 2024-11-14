@@ -14,7 +14,8 @@ import {
     inVoiceChannel,
 } from "../../utils/functions";
 import { musicPlayers } from "../../core/managers";
-import { ValidationError, ValidationErrorCode } from "../../errors";
+import { ValidationErrorCode } from "../../enums";
+import { ValidationError } from "../../errors";
 
 export class SkipCommand implements Command {
     readonly cooldown: number;
@@ -74,7 +75,7 @@ export class SkipCommand implements Command {
             return;
         }
 
-        player.skip();
+        await player.skip();
 
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)

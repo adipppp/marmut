@@ -15,7 +15,8 @@ import {
 } from "../../utils/functions";
 import { QueueView } from "../../views";
 import { musicPlayers } from "../../core/managers";
-import { ValidationError, ValidationErrorCode } from "../../errors";
+import { ValidationErrorCode } from "../../enums";
+import { ValidationError } from "../../errors";
 
 export class QueueCommand implements Command {
     readonly cooldown: number;

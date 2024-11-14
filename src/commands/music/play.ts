@@ -1,28 +1,24 @@
 import {
     ChatInputCommandInteraction,
-    Colors,
-    EmbedBuilder,
-    Events,
     GuildMember,
     SharedSlashCommand,
     SlashCommandBuilder,
-    VoiceBasedChannel,
 } from "discord.js";
+import YouTube, { Video } from "youtube-sr";
+import { Song } from "../../core/music";
+import { musicPlayers } from "../../core/managers";
+import { ValidationErrorCode } from "../../enums";
+import { ValidationError } from "../../errors";
 import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientIsPlayingIn,
+    createAddedToQueueEmbed,
+    createNowPlayingEmbed,
     getValidationErrorMessage,
     inVoiceChannel,
+    joinVoiceChannel,
 } from "../../utils/functions";
-import { joinVoiceChannel } from "@discordjs/voice";
-import YouTube, { Video } from "youtube-sr";
-import { Song } from "../../core/music";
-import { musicPlayers } from "../../core/managers";
-import { ValidationError, ValidationErrorCode } from "../../errors";
-import EventEmitter, { once } from "events";
-
-const MARMUT_ICON_40PX = process.env.MARMUT_ICON_40PX;
 
 export class PlayCommand implements Command {
     readonly cooldown: number;
@@ -72,15 +68,6 @@ export class PlayCommand implements Command {
         }
     }
 
-    private joinVoiceChannel(channel: VoiceBasedChannel) {
-        const guild = channel.guild;
-        const guildId = guild.id;
-        const channelId = channel.id;
-        const adapterCreator = guild.voiceAdapterCreator;
-
-        joinVoiceChannel({ guildId, channelId, adapterCreator });
-    }
-
     private async getVideo(query: string) {
         if (YouTube.validate(query, "VIDEO")) {
             return await YouTube.getVideo(query);
@@ -99,19 +86,11 @@ export class PlayCommand implements Command {
     }
 
     private createEmbed(song: Song, currentIndex: number) {
-        let description;
         if (currentIndex === -1) {
-            description = `:arrow_forward:  -  Now Playing\n[${song.title}](${song.videoUrl})`;
+            return createNowPlayingEmbed(song);
         } else {
-            description = `:white_check_mark:  -  Added to queue\n[${song.title}](${song.videoUrl})`;
+            return createAddedToQueueEmbed(song);
         }
-
-        return new EmbedBuilder()
-            .setColor(Colors.Red)
-            .setTimestamp()
-            .setThumbnail(song.thumbnailUrl)
-            .setFooter({ text: "Marmut", iconURL: MARMUT_ICON_40PX })
-            .setDescription(description);
     }
 
     async run(interaction: ChatInputCommandInteraction) {
@@ -140,9 +119,7 @@ export class PlayCommand implements Command {
         const guild = interaction.guild!;
 
         if (!clientInSameVoiceChannelAs(member) && !clientIsPlayingIn(guild)) {
-            this.joinVoiceChannel(member.voice.channel!);
-            const client = interaction.client as unknown;
-            await once(client as EventEmitter, Events.VoiceStateUpdate);
+            await joinVoiceChannel(member.voice.channel!);
         }
 
         const guildId = guild.id;

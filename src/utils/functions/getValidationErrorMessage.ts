@@ -1,4 +1,5 @@
-import { ValidationError, ValidationErrorCode } from "../../errors";
+import { ValidationErrorCode } from "../../enums";
+import { ValidationError } from "../../errors";
 
 export function getValidationErrorMessage(error: ValidationError) {
     let content;

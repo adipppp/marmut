@@ -6,6 +6,9 @@ import {
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
+import { lavalinkClient } from "../../core/client";
+import { ValidationErrorCode } from "../../enums";
+import { ValidationError } from "../../errors";
 import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
@@ -13,9 +16,6 @@ import {
     getValidationErrorMessage,
     inVoiceChannel,
 } from "../../utils/functions";
-import { getVoiceConnection } from "@discordjs/voice";
-import { musicPlayers } from "../../core/managers";
-import { ValidationError, ValidationErrorCode } from "../../errors";
 
 const LEAVE_EMOJI = process.env.LEAVE_EMOJI;
 
@@ -68,11 +68,7 @@ export class LeaveCommand implements Command {
 
         const guildId = interaction.guildId!;
 
-        const player = musicPlayers.get(guildId)!;
-        await player.stop();
-
-        const connection = getVoiceConnection(guildId);
-        connection?.destroy();
+        await lavalinkClient.leaveVoiceChannel(guildId);
 
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)

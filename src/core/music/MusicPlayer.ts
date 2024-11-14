@@ -1,38 +1,29 @@
-import {
-    AudioPlayerStatus,
-    VoiceConnectionStatus,
-    createAudioPlayer,
-    createAudioResource,
-    getVoiceConnection,
-} from "@discordjs/voice";
-import { marmut, prisma } from "../client";
-import { Song } from "./Song";
-import {
-    Colors,
-    EmbedBuilder,
-    SendableChannels,
-    Snowflake,
-    TextBasedChannel,
-} from "discord.js";
-import ytdl from "@distube/ytdl-core";
+import { SendableChannels, Snowflake, TextBasedChannel } from "discord.js";
+import { Player } from "shoukaku";
+import { lavalinkClient, marmut, prisma } from "../client";
 import { RepeatMode } from "../../enums";
+import { MusicPlayerErrorCode } from "../../enums/MusicPlayerErrorCode";
+import { MusicPlayerError } from "../../errors";
+import { Song } from "./Song";
+import { createNowPlayingEmbed } from "../../utils/functions";
 
-const MARMUT_ICON_40PX = process.env.MARMUT_ICON_40PX;
+const VIDEO_URL_REGEX =
+    /https?:\/\/(?:(?:www\.)?youtube\.com\/watch\?(?:[a-zA-Z]+=.*&)*v=|youtu\.be\/)([^&]+)/;
 
 export class MusicPlayer {
     private readonly guildId: Snowflake;
     private songIdArray: bigint[];
     private currentIndex: number;
-    private volume: number;
     private repeatMode: RepeatMode;
     private textChannelId?: Snowflake;
 
-    constructor(guildId: Snowflake) {
+    constructor(guildId: Snowflake, player: Player) {
         this.guildId = guildId;
         this.songIdArray = [];
         this.currentIndex = -1;
-        this.volume = 50;
         this.repeatMode = RepeatMode.Off;
+
+        player.on("end", this.handlePlayerEnd.bind(this));
     }
 
     private async addSong(song: Song) {
@@ -46,21 +37,8 @@ export class MusicPlayer {
         const deletedSongs = await prisma.song.deleteMany({
             where: { id: { in: songIds } },
         });
-
         this.songIdArray = [];
-
         return deletedSongs;
-    }
-
-    private createEmbed(song: Song) {
-        return new EmbedBuilder()
-            .setColor(Colors.Red)
-            .setTimestamp()
-            .setThumbnail(song.thumbnailUrl)
-            .setFooter({ text: "Marmut", iconURL: MARMUT_ICON_40PX })
-            .setDescription(
-                `:arrow_forward:  -  Now Playing\n[${song.title}](${song.videoUrl})`
-            );
     }
 
     private getNextIndex() {
@@ -79,7 +57,7 @@ export class MusicPlayer {
         return nextIndex;
     }
 
-    private async handleIdleState() {
+    private async handlePlayerEnd() {
         this.currentIndex = this.getNextIndex();
 
         if (this.songIdArray.length === 0) {
@@ -99,82 +77,31 @@ export class MusicPlayer {
                 where: { id: nextSongId },
             }))!;
 
-            const channel = marmut.channels.cache.get(
+            const channel = marmut.channels.resolve(
                 this.textChannelId!
             ) as SendableChannels;
 
             await this.playSong(nextSong);
 
-            const embed = this.createEmbed(nextSong);
+            const embed = createNowPlayingEmbed(nextSong);
             await channel.send({ embeds: [embed] });
         }
     }
 
-    private async playSong(song: Song) {
-        const audioPlayer = this.getAudioPlayer();
-        if (!audioPlayer) {
-            throw new Error("Voice connection has not been established.");
-        }
-
-        const stream = this.getAudioStream(song.videoUrl);
-        const resource = createAudioResource(stream, {
-            inlineVolume: true,
-        });
-        resource.volume!.setVolume(this.volume / 100);
-
-        audioPlayer.play(resource);
-    }
-
-    private getAudioStream(url: string) {
-        const dlChunkSize = process.env.DL_CHUNK_SIZE
-            ? 1024 * 1024 * parseInt(process.env.DL_CHUNK_SIZE)
-            : undefined;
-
-        const stream = ytdl(url, {
-            dlChunkSize,
-            filter: "audioonly",
-            quality: "highestaudio",
-        });
-
-        stream.once("error", (err) => {
-            console.error(err);
-            stream.destroy();
-        });
-
-        return stream;
-    }
-
-    private getAudioPlayer() {
-        const connection = getVoiceConnection(this.guildId);
-        if (
-            !connection ||
-            connection.state.status === VoiceConnectionStatus.Destroyed
-        ) {
-            return null;
-        }
-
-        let audioPlayer;
-        let subscription = connection.state.subscription;
-
-        if (subscription) {
-            audioPlayer = subscription.player;
-        } else {
-            audioPlayer = createAudioPlayer();
-
-            audioPlayer.on("error", (err) => {
-                console.error(err);
-                this.currentIndex = this.songIdArray.length;
+    private getVideoId(videoUrl: string) {
+        const match = videoUrl.match(VIDEO_URL_REGEX);
+        if (match === null) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.INVALID_VIDEO_URL,
             });
-
-            audioPlayer.on(
-                AudioPlayerStatus.Idle,
-                async () => await this.handleIdleState()
-            );
-
-            connection.subscribe(audioPlayer);
         }
+        return match[1];
+    }
 
-        return audioPlayer;
+    private async playSong(song: Song) {
+        const player = lavalinkClient.players.get(this.guildId)!;
+        const videoId = this.getVideoId(song.videoUrl);
+        await player.playTrack({ track: { identifier: videoId } });
     }
 
     isPlaying() {
@@ -190,42 +117,58 @@ export class MusicPlayer {
         }
     }
 
-    async stop(force?: boolean) {
+    async stop() {
+        const player = lavalinkClient.players.get(this.guildId);
+        if (player === undefined) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
+            });
+        }
+        await player.stopTrack();
         if (this.songIdArray.length > 0) {
             await this.removeAllSongs();
         }
-        const audioPlayer = this.getAudioPlayer();
-        const stream = this.getAudioResource()?.playStream;
-        const retval = audioPlayer !== null && audioPlayer.stop(force);
-        stream?.destroy();
-        return retval;
     }
 
-    skip() {
-        const audioPlayer = this.getAudioPlayer();
-        if (!audioPlayer) {
-            throw new Error("Voice connection has not been established.");
+    async skip() {
+        const player = lavalinkClient.players.get(this.guildId);
+        if (player === undefined) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
+            });
         }
-
-        audioPlayer.unpause();
-
-        return audioPlayer.stop();
+        if (player.paused) {
+            await player.setPaused(false);
+        }
+        await player.stopTrack();
     }
 
-    pause(interpolateSilence?: boolean) {
-        const audioPlayer = this.getAudioPlayer();
-        if (!audioPlayer) {
-            throw new Error("Voice connection has not been established.");
+    async pause() {
+        const player = lavalinkClient.players.get(this.guildId);
+        if (player === undefined) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
+            });
         }
-        return audioPlayer.pause(interpolateSilence);
+        if (player.paused) {
+            return false;
+        }
+        await player.setPaused(true);
+        return true;
     }
 
-    unpause() {
-        const audioPlayer = this.getAudioPlayer();
-        if (!audioPlayer) {
-            throw new Error("Voice connection has not been established.");
+    async unpause() {
+        const player = lavalinkClient.players.get(this.guildId);
+        if (player === undefined) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
+            });
         }
-        return audioPlayer.unpause();
+        if (!player.paused) {
+            return false;
+        }
+        await player.setPaused(false);
+        return true;
     }
 
     async removeSong(index: number) {
@@ -237,7 +180,7 @@ export class MusicPlayer {
         if (this.currentIndex > index) {
             this.currentIndex--;
         } else if (this.currentIndex === index) {
-            this.skip();
+            await this.skip();
             this.currentIndex--;
         }
 
@@ -247,22 +190,23 @@ export class MusicPlayer {
     }
 
     getVolume() {
-        return this.volume;
+        const player = lavalinkClient.players.get(this.guildId);
+        if (player === undefined) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
+            });
+        }
+        return player.volume;
     }
 
-    setVolume(volume: number) {
-        this.volume = Math.trunc(volume);
-
-        const audioPlayer = this.getAudioPlayer();
-        if (
-            !audioPlayer ||
-            audioPlayer.state.status === AudioPlayerStatus.Idle
-        ) {
-            return;
+    async setVolume(volume: number) {
+        if (volume < 0 || volume > 100) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.VOLUME_OUT_OF_RANGE,
+            });
         }
-
-        const resource = audioPlayer.state.resource;
-        resource.volume!.setVolume(volume / 100);
+        const player = lavalinkClient.players.get(this.guildId)!;
+        await player.setGlobalVolume(volume);
     }
 
     getRepeatMode() {
@@ -282,16 +226,14 @@ export class MusicPlayer {
         return await prisma.song.findUnique({ where: { id: songId } });
     }
 
-    getAudioResource() {
-        const audioPlayer = this.getAudioPlayer();
-        if (
-            audioPlayer &&
-            audioPlayer.state.status !== AudioPlayerStatus.Idle
-        ) {
-            return audioPlayer.state.resource;
-        } else {
-            return null;
+    getCurrentSongPlayback() {
+        const player = lavalinkClient.players.get(this.guildId);
+        if (player === undefined) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
+            });
         }
+        return player.position;
     }
 
     async getQueue() {
@@ -304,5 +246,11 @@ export class MusicPlayer {
             },
             where: { id: { in: this.songIdArray } },
         });
+    }
+
+    static async create(guildId: Snowflake, player: Player) {
+        const musicPlayer = new MusicPlayer(guildId, player);
+        await player.setGlobalVolume(50);
+        return musicPlayer;
     }
 }

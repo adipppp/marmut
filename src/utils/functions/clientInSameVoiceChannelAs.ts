@@ -1,6 +1,6 @@
+import { GuildMember } from "discord.js";
 import { clientInVoiceChannelOf } from "./clientInVoiceChannelOf";
 import { inVoiceChannel } from "./inVoiceChannel";
-import { GuildMember } from "discord.js";
 
 export function clientInSameVoiceChannelAs(member: GuildMember) {
     const guild = member.guild;

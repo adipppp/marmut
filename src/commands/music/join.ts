@@ -6,15 +6,16 @@ import {
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
+import { ValidationErrorCode } from "../../enums";
+import { ValidationError } from "../../errors";
 import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientIsPlayingIn,
     getValidationErrorMessage,
     inVoiceChannel,
+    joinVoiceChannel,
 } from "../../utils/functions";
-import { joinVoiceChannel } from "@discordjs/voice";
-import { ValidationError, ValidationErrorCode } from "../../errors";
 
 const JOIN_EMOJI = process.env.JOIN_EMOJI;
 
@@ -101,7 +102,6 @@ export class JoinCommand implements Command {
         }
 
         const guild = interaction.guild!;
-        const guildId = guild.id;
 
         const clientId = interaction.client.user.id;
         const clientVoiceState = guild.voiceStates.cache.get(clientId);
@@ -121,9 +121,7 @@ export class JoinCommand implements Command {
             return;
         }
 
-        const adapterCreator = guild.voiceAdapterCreator;
-
-        joinVoiceChannel({ guildId, channelId, adapterCreator });
+        await joinVoiceChannel(member.voice.channel!);
 
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)
