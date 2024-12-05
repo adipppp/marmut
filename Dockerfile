@@ -6,29 +6,21 @@
 
 # Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
 
-# ARG NODE_VERSION=20.17.0
+ARG NODE_VERSION=22.12.0
 
 ################################################################################
 # # Use node image for base image for all stages.
-# FROM node:${NODE_VERSION}-alpine as base
-
-FROM debian:bookworm as base
+FROM node:${NODE_VERSION} AS base
 
 # Set working directory for all build stages.
 WORKDIR /usr/src/app
 
-RUN echo "Acquire::http::Pipeline-Depth 0;" > /etc/apt/apt.conf.d/99custom && \
-    echo "Acquire::http::No-Cache true;" >> /etc/apt/apt.conf.d/99custom && \
-    echo "Acquire::BrokenProxy    true;" >> /etc/apt/apt.conf.d/99custom
-
 RUN apt-get update && apt-get upgrade -y
-RUN apt-get install nodejs -y
-RUN apt-get install npm -y
 
 
 ################################################################################
 # Create a stage for installing production dependecies.
-FROM base as deps
+FROM base AS deps
 
 # Download dependencies as a separate step to take advantage of Docker's caching.
 # Leverage a cache mount to /root/.npm to speed up subsequent builds.
@@ -45,7 +37,7 @@ RUN npx prisma generate
 
 ################################################################################
 # Create a stage for building the application.
-FROM deps as build
+FROM deps AS build
 
 # Download additional development dependencies before building, as some projects require
 # "devDependencies" to be installed to build. If you don't need this, remove this step.
@@ -62,12 +54,10 @@ RUN npm run build
 ################################################################################
 # Create a new stage to run the application with minimal runtime dependencies
 # where the necessary files are copied from the build stage.
-FROM base as final
+FROM base AS final
 
 # Use production node environment by default.
 ENV NODE_ENV production
-
-RUN useradd --create-home node
 
 # Run the application as a non-root user.
 USER node
