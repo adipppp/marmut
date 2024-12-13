@@ -1,4 +1,10 @@
-import { SendableChannels, Snowflake, TextBasedChannel } from "discord.js";
+import {
+    Colors,
+    EmbedBuilder,
+    SendableChannels,
+    Snowflake,
+    TextBasedChannel,
+} from "discord.js";
 import { Player } from "shoukaku";
 import { lavalinkClient, marmut, prisma } from "../client";
 import { RepeatMode } from "../../enums";
@@ -7,6 +13,8 @@ import { MusicPlayerError } from "../../errors";
 import { Song } from "./Song";
 import { createNowPlayingEmbed } from "../../utils/functions";
 
+const ERROR_EMOJI = process.env.ERROR_EMOJI;
+const MARMUT_ICON_40PX = process.env.MARMUT_ICON_40PX;
 const VIDEO_URL_REGEX =
     /https?:\/\/(?:(?:www\.)?youtube\.com\/watch\?(?:[a-zA-Z]+=.*&)*v=|youtu\.be\/)([^&]+)/;
 
@@ -23,7 +31,65 @@ export class MusicPlayer {
         this.currentIndex = -1;
         this.repeatMode = RepeatMode.Off;
 
-        player.on("end", this.handlePlayerEnd.bind(this));
+        player.on("end", async () => {
+            try {
+                await this.handlePlayerEnd();
+            } catch (err) {
+                await this.handleError(err);
+            }
+        });
+    }
+
+    private async handleError(err: Error) {
+        console.error(err);
+
+        let textChannel = marmut.channels.resolve(this.textChannelId!);
+        if (textChannel === null || !textChannel.isSendable()) {
+            return;
+        }
+
+        const errorEmbed = this.createErrorEmbed();
+        await textChannel.send({ embeds: [errorEmbed] }).catch(() => {});
+    }
+
+    private async handlePlayerEnd() {
+        this.currentIndex = this.getNextIndex();
+
+        if (this.songIdArray.length === 0) {
+            this.currentIndex = -1;
+        } else if (this.currentIndex >= this.songIdArray.length) {
+            await this.removeAllSongs();
+            this.currentIndex = -1;
+        } else {
+            const nextSongId = this.songIdArray[this.currentIndex];
+            const nextSong = (await prisma.song.findUnique({
+                select: {
+                    title: true,
+                    thumbnailUrl: true,
+                    videoUrl: true,
+                    duration: true,
+                },
+                where: { id: nextSongId },
+            }))!;
+
+            await this.playSong(nextSong);
+
+            const textChannel = marmut.channels.resolve(
+                this.textChannelId!
+            ) as SendableChannels;
+            const embed = createNowPlayingEmbed(nextSong);
+            await textChannel.send({ embeds: [embed] });
+        }
+    }
+
+    private createErrorEmbed() {
+        return new EmbedBuilder()
+            .setColor(Colors.Red)
+            .setTimestamp()
+            .setFooter({ text: "Marmut", iconURL: MARMUT_ICON_40PX })
+            .setDescription(
+                `${ERROR_EMOJI}  -  An error has occured on the music player!`
+            );
     }
 
     private async addSong(song: Song) {
@@ -57,37 +123,6 @@ export class MusicPlayer {
         return nextIndex;
     }
 
-    private async handlePlayerEnd() {
-        this.currentIndex = this.getNextIndex();
-
-        if (this.songIdArray.length === 0) {
-            this.currentIndex = -1;
-        } else if (this.currentIndex >= this.songIdArray.length) {
-            await this.removeAllSongs();
-            this.currentIndex = -1;
-        } else {
-            const nextSongId = this.songIdArray[this.currentIndex];
-            const nextSong = (await prisma.song.findUnique({
-                select: {
-                    title: true,
-                    thumbnailUrl: true,
-                    videoUrl: true,
-                    duration: true,
-                },
-                where: { id: nextSongId },
-            }))!;
-
-            const channel = marmut.channels.resolve(
-                this.textChannelId!
-            ) as SendableChannels;
-
-            await this.playSong(nextSong);
-
-            const embed = createNowPlayingEmbed(nextSong);
-            await channel.send({ embeds: [embed] });
-        }
-    }
-
     private getVideoId(videoUrl: string) {
         const match = videoUrl.match(VIDEO_URL_REGEX);
         if (match === null) {
@@ -99,7 +134,12 @@ export class MusicPlayer {
     }
 
     private async playSong(song: Song) {
-        const player = lavalinkClient.players.get(this.guildId)!;
+        const player = lavalinkClient.players.get(this.guildId);
+        if (player === undefined) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
+            });
+        }
         const videoId = this.getVideoId(song.videoUrl);
         await player.playTrack({ track: { identifier: videoId } });
     }
@@ -124,10 +164,10 @@ export class MusicPlayer {
                 code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
             });
         }
-        await player.stopTrack();
         if (this.songIdArray.length > 0) {
             await this.removeAllSongs();
         }
+        await player.stopTrack();
     }
 
     async skip() {
@@ -205,7 +245,12 @@ export class MusicPlayer {
                 code: MusicPlayerErrorCode.VOLUME_OUT_OF_RANGE,
             });
         }
-        const player = lavalinkClient.players.get(this.guildId)!;
+        const player = lavalinkClient.players.get(this.guildId);
+        if (player === undefined) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
+            });
+        }
         await player.setGlobalVolume(volume);
     }
 

@@ -1,4 +1,4 @@
-import { ValidationErrorCode } from "../enums/ValidationErrorCode";
+import { ValidationErrorCode } from "../enums";
 
 interface ValidationErrorOptions {
     code: ValidationErrorCode;

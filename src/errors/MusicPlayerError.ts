@@ -1,4 +1,4 @@
-import { MusicPlayerErrorCode } from "../enums/MusicPlayerErrorCode";
+import { MusicPlayerErrorCode } from "../enums";
 
 interface MusicPlayerErrorOptions {
     code: MusicPlayerErrorCode;
