@@ -13,6 +13,6 @@ export async function joinVoiceChannel(channel: VoiceBasedChannel) {
         shardId: 0,
         deaf: true,
     });
-    const musicPlayer = await MusicPlayer.create(guildId, player);
+    const musicPlayer = new MusicPlayer(guildId, player);
     musicPlayers.set(guildId, musicPlayer);
 }

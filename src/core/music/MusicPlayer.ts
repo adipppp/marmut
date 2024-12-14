@@ -31,6 +31,8 @@ export class MusicPlayer {
         this.currentIndex = -1;
         this.repeatMode = RepeatMode.Off;
 
+        player.setGlobalVolume(50);
+
         player.on("end", async () => {
             try {
                 await this.handlePlayerEnd();
@@ -291,11 +293,5 @@ export class MusicPlayer {
             },
             where: { id: { in: this.songIdArray } },
         });
-    }
-
-    static async create(guildId: Snowflake, player: Player) {
-        const musicPlayer = new MusicPlayer(guildId, player);
-        await player.setGlobalVolume(50);
-        return musicPlayer;
     }
 }
