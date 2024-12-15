@@ -60,8 +60,8 @@ export class MusicPlayer {
         if (this.songIdArray.length === 0) {
             this.currentIndex = -1;
         } else if (this.currentIndex >= this.songIdArray.length) {
-            await this.removeAllSongs();
             this.currentIndex = -1;
+            await this.removeAllSongs();
         } else {
             const nextSongId = this.songIdArray[this.currentIndex];
             const nextSong = (await prisma.song.findUnique({
@@ -152,9 +152,9 @@ export class MusicPlayer {
 
     async play(song: Song, channel: TextBasedChannel) {
         await this.addSong(song);
+        this.textChannelId = channel.id;
         if (this.currentIndex === -1) {
             this.currentIndex = 0;
-            this.textChannelId = channel.id;
             await this.playSong(song);
         }
     }
@@ -292,6 +292,7 @@ export class MusicPlayer {
                 duration: true,
             },
             where: { id: { in: this.songIdArray } },
+            orderBy: { id: "asc" },
         });
     }
 }
