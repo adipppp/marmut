@@ -78,15 +78,14 @@ export class PlayCommand implements Command {
                 code: LavalinkErrorCode.NO_AVAILABLE_NODES,
             });
         }
-        let response;
+        let identifier;
         const videoId = getVideoId(query);
         if (videoId !== null) {
-            response = await node.rest.resolve(videoId);
+            identifier = videoId;
         } else {
-            const ytmResultPromise = node.rest.resolve(`ytmsearch:${query}`);
-            const ytResultPromise = node.rest.resolve(`ytsearch:${query}`);
-            response = await ytmResultPromise.catch(() => ytResultPromise);
+            identifier = `ytsearch:${query}`;
         }
+        const response = await node.rest.resolve(identifier);
         return response;
     }
 
