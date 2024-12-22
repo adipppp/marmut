@@ -9,7 +9,7 @@ import { Song } from "../../core/music";
 import { musicPlayers } from "../../core/managers";
 import { LavalinkErrorCode, ValidationErrorCode } from "../../enums";
 import { LavalinkError, ValidationError } from "../../errors";
-import { LoadType, Track, TrackResult } from "shoukaku";
+import { LoadType, Track } from "shoukaku";
 import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,

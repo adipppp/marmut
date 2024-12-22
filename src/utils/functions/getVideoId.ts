@@ -9,7 +9,7 @@ export function getVideoId(input: string) {
     }
 
     if (
-        (url.protocol !== "http" && url.protocol !== "https") ||
+        (url.protocol !== "http:" && url.protocol !== "https:") ||
         !ytHostnames.has(url.hostname)
     ) {
         return null;
