@@ -3,6 +3,7 @@ export * from "./clientInVoiceChannelOf";
 export * from "./clientIsPlayingIn";
 export * from "./createAddedToQueueEmbed";
 export * from "./createNowPlayingEmbed";
+export * from "./getLavalinkErrorMessage";
 export * from "./getValidationErrorMessage";
 export * from "./getVideoId";
 export * from "./inVoiceChannel";

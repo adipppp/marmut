@@ -9,19 +9,19 @@ import { Song } from "../../core/music";
 import { musicPlayers } from "../../core/managers";
 import { LavalinkErrorCode, ValidationErrorCode } from "../../enums";
 import { LavalinkError, ValidationError } from "../../errors";
-import { LoadType, TrackResult } from "shoukaku";
+import { LoadType, Track, TrackResult } from "shoukaku";
 import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientIsPlayingIn,
     createAddedToQueueEmbed,
     createNowPlayingEmbed,
+    getLavalinkErrorMessage,
     getValidationErrorMessage,
     getVideoId,
     inVoiceChannel,
     joinVoiceChannel,
 } from "../../utils/functions";
-import { getLavalinkErrorMessage } from "../../utils/functions/getLavalinkErrorMessage";
 
 export class PlayCommand implements Command {
     readonly cooldown: number;
@@ -71,7 +71,7 @@ export class PlayCommand implements Command {
         }
     }
 
-    private async getTrack(query: string) {
+    private async getSearchResult(query: string) {
         const node = lavalinkClient.options.nodeResolver(lavalinkClient.nodes);
         if (node === undefined) {
             throw new LavalinkError({
@@ -87,21 +87,22 @@ export class PlayCommand implements Command {
             const ytResultPromise = node.rest.resolve(`ytsearch:${query}`);
             response = await ytmResultPromise.catch(() => ytResultPromise);
         }
-        if (response === undefined) {
-            throw new LavalinkError({
-                code: LavalinkErrorCode.TRACK_NOT_FOUND,
-            });
-        }
-        if (response.loadType !== LoadType.TRACK) {
-            throw new LavalinkError({
-                code: LavalinkErrorCode.TRACK_NOT_FOUND,
-            });
-        }
         return response;
     }
 
-    private createSong(trackResult: TrackResult) {
-        const info = trackResult.data.info;
+    private async getTrack(query: string) {
+        const response = await this.getSearchResult(query);
+        if (response === undefined || response.loadType !== LoadType.SEARCH) {
+            throw new LavalinkError({
+                code: LavalinkErrorCode.TRACK_NOT_FOUND,
+            });
+        }
+        const track = response.data[0];
+        return track;
+    }
+
+    private createSong(track: Track) {
+        const info = track.info;
         return new Song({
             title: info.title,
             thumbnailUrl: info.artworkUrl ?? "",
