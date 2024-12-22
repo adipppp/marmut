@@ -2,8 +2,6 @@ services:
   marmut:
     build:
       context: .
-    environment:
-      NODE_ENV: development
     env_file:
       - path: .env
         required: true
