@@ -92,13 +92,22 @@ export class PlayCommand implements Command {
 
     private async getTrack(query: string) {
         const response = await this.getSearchResult(query);
-        if (response === undefined || response.loadType !== LoadType.SEARCH) {
+        if (
+            response === undefined ||
+            (response.loadType !== LoadType.TRACK &&
+                response.loadType !== LoadType.SEARCH) ||
+            (response.loadType === LoadType.SEARCH &&
+                response.data.length === 0)
+        ) {
             throw new LavalinkError({
                 code: LavalinkErrorCode.TRACK_NOT_FOUND,
             });
         }
-        const track = response.data[0];
-        return track;
+        if (response.loadType === LoadType.SEARCH) {
+            return response.data[0];
+        } else {
+            return response.data;
+        }
     }
 
     private createSong(track: Track) {
@@ -123,12 +132,11 @@ export class PlayCommand implements Command {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (!(err instanceof ValidationError)) {
-                throw err;
+            if (err instanceof ValidationError) {
+                const content = getValidationErrorMessage(err);
+                interaction.reply({ content, ephemeral: true }).catch(() => {});
             }
-            const content = getValidationErrorMessage(err);
-            await interaction.reply({ content, ephemeral: true });
-            return;
+            throw err;
         }
 
         await interaction.deferReply();
@@ -139,8 +147,12 @@ export class PlayCommand implements Command {
         try {
             trackResult = await this.getTrack(query);
         } catch (err) {
-            await interaction.editReply(getLavalinkErrorMessage(err));
-            return;
+            if (err instanceof LavalinkError) {
+                interaction
+                    .editReply(getLavalinkErrorMessage(err))
+                    .catch(() => {});
+            }
+            throw err;
         }
 
         const member = interaction.member as GuildMember;
@@ -158,9 +170,9 @@ export class PlayCommand implements Command {
         try {
             await player.play(song, interaction.channel!);
         } catch (err) {
-            await interaction.editReply(
-                "Bot is not connected to any voice channel."
-            );
+            interaction
+                .editReply("Bot is not connected to any voice channel.")
+                .catch(() => {});
             throw err;
         }
 
