@@ -4,11 +4,12 @@ import {
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
-import YouTube, { Video } from "youtube-sr";
+import { lavalinkClient } from "../../core/client";
 import { Song } from "../../core/music";
 import { musicPlayers } from "../../core/managers";
-import { ValidationErrorCode } from "../../enums";
-import { ValidationError } from "../../errors";
+import { LavalinkErrorCode, ValidationErrorCode } from "../../enums";
+import { LavalinkError, ValidationError } from "../../errors";
+import { LoadType, TrackResult } from "shoukaku";
 import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
@@ -16,9 +17,11 @@ import {
     createAddedToQueueEmbed,
     createNowPlayingEmbed,
     getValidationErrorMessage,
+    getVideoId,
     inVoiceChannel,
     joinVoiceChannel,
 } from "../../utils/functions";
+import { getLavalinkErrorMessage } from "../../utils/functions/getLavalinkErrorMessage";
 
 export class PlayCommand implements Command {
     readonly cooldown: number;
@@ -68,20 +71,42 @@ export class PlayCommand implements Command {
         }
     }
 
-    private async getVideo(query: string) {
-        if (YouTube.validate(query, "VIDEO")) {
-            return await YouTube.getVideo(query);
-        } else {
-            return await YouTube.searchOne(query);
+    private async getTrack(query: string) {
+        const node = lavalinkClient.options.nodeResolver(lavalinkClient.nodes);
+        if (node === undefined) {
+            throw new LavalinkError({
+                code: LavalinkErrorCode.NO_AVAILABLE_NODES,
+            });
         }
+        let response;
+        const videoId = getVideoId(query);
+        if (videoId !== null) {
+            response = await node.rest.resolve(videoId);
+        } else {
+            const ytmResultPromise = node.rest.resolve(`ytmsearch:${query}`);
+            const ytResultPromise = node.rest.resolve(`ytsearch:${query}`);
+            response = await ytmResultPromise.catch(() => ytResultPromise);
+        }
+        if (response === undefined) {
+            throw new LavalinkError({
+                code: LavalinkErrorCode.TRACK_NOT_FOUND,
+            });
+        }
+        if (response.loadType !== LoadType.TRACK) {
+            throw new LavalinkError({
+                code: LavalinkErrorCode.TRACK_NOT_FOUND,
+            });
+        }
+        return response;
     }
 
-    private createSong(video: Video) {
+    private createSong(trackResult: TrackResult) {
+        const info = trackResult.data.info;
         return new Song({
-            title: video.title!,
-            thumbnailUrl: video.thumbnail!.url!,
-            videoUrl: video.url,
-            duration: video.duration!,
+            title: info.title,
+            thumbnailUrl: info.artworkUrl ?? "",
+            videoUrl: info.uri ?? "",
+            duration: info.length,
         });
     }
 
@@ -108,10 +133,12 @@ export class PlayCommand implements Command {
         await interaction.deferReply();
 
         const query = interaction.options.getString("song", true);
-        const result = await this.getVideo(query);
 
-        if (!result) {
-            await interaction.editReply("Could not find the song.");
+        let trackResult;
+        try {
+            trackResult = await this.getTrack(query);
+        } catch (err) {
+            await interaction.editReply(getLavalinkErrorMessage(err));
             return;
         }
 
@@ -124,7 +151,7 @@ export class PlayCommand implements Command {
 
         const guildId = guild.id;
         const player = musicPlayers.get(guildId)!;
-        const song = this.createSong(result);
+        const song = this.createSong(trackResult);
         const currentIndex = player.getCurrentIndex();
 
         try {
