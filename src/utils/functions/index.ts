@@ -4,6 +4,7 @@ export * from "./clientIsPlayingIn";
 export * from "./createAddedToQueueEmbed";
 export * from "./createNowPlayingEmbed";
 export * from "./getValidationErrorMessage";
+export * from "./getVideoId";
 export * from "./inVoiceChannel";
 export * from "./joinVoiceChannel";
 export * from "./sleep";
