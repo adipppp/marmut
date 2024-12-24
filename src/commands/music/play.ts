@@ -4,12 +4,12 @@ import {
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
+import { LoadType, Track } from "shoukaku";
 import { lavalinkClient } from "../../core/client";
 import { Song } from "../../core/music";
 import { musicPlayers } from "../../core/managers";
 import { LavalinkErrorCode, ValidationErrorCode } from "../../enums";
 import { LavalinkError, ValidationError } from "../../errors";
-import { LoadType, Track } from "shoukaku";
 import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
@@ -71,7 +71,7 @@ export class PlayCommand implements Command {
         }
     }
 
-    private async getSearchResult(query: string) {
+    private async getSearchResults(query: string) {
         const node = lavalinkClient.options.nodeResolver(lavalinkClient.nodes);
         if (node === undefined) {
             throw new LavalinkError({
@@ -90,7 +90,7 @@ export class PlayCommand implements Command {
     }
 
     private async getTrack(query: string) {
-        const response = await this.getSearchResult(query);
+        const response = await this.getSearchResults(query);
         if (
             response === undefined ||
             (response.loadType !== LoadType.TRACK &&
