@@ -5,6 +5,7 @@ import {
     GuildMember,
     SharedSlashCommand,
     SlashCommandBuilder,
+    VoiceBasedChannel,
 } from "discord.js";
 import { ValidationErrorCode } from "../../enums";
 import { ValidationError } from "../../errors";
@@ -78,7 +79,8 @@ export class JoinCommand implements Command {
             });
         }
 
-        const voiceChannel = member.voice.channel!;
+        const voiceChannel = (interaction.options.getChannel("channel") ??
+            member.voice.channel) as VoiceBasedChannel;
 
         if (!clientInSameVoiceChannelAsMember && !voiceChannel.joinable) {
             throw new ValidationError({
@@ -119,7 +121,9 @@ export class JoinCommand implements Command {
             return;
         }
 
-        await joinVoiceChannel(member.voice.channel!);
+        const voiceChannel = (interaction.options.getChannel("channel") ??
+            member.voice.channel) as VoiceBasedChannel;
+        await joinVoiceChannel(voiceChannel);
 
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)
