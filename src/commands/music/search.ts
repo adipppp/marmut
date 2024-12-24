@@ -115,10 +115,10 @@ export class SearchCommand implements Command {
                 code: LavalinkErrorCode.TRACK_NOT_FOUND,
             });
         }
-        if (response.loadType === LoadType.TRACK) {
-            return [response.data];
+        if (response.loadType === LoadType.SEARCH) {
+            return response.data.slice(0, 10);
         } else {
-            return response.data;
+            return [response.data];
         }
     }
 
