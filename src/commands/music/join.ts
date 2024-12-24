@@ -39,7 +39,7 @@ export class JoinCommand implements Command {
             );
     }
 
-    private async validateArgs(interaction: ChatInputCommandInteraction) {
+    private validateArgs(interaction: ChatInputCommandInteraction) {
         const channel = interaction.options.getChannel("channel");
         const guild = interaction.guild!;
 
@@ -61,8 +61,6 @@ export class JoinCommand implements Command {
                 });
             }
         }
-
-        return true;
     }
 
     private validatePreconditions(interaction: ChatInputCommandInteraction) {
