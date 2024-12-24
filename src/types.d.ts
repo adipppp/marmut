@@ -16,6 +16,10 @@ export interface EventHandler {
     handle(...args: any[]): void | Promise<void>;
 }
 
+export interface ClientEventListener {
+    listen(): void;
+}
+
 export interface SongData {
     title: string;
     thumbnailUrl: string;

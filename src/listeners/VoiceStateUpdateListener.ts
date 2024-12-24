@@ -1,13 +1,13 @@
-import { Events, Snowflake, VoiceState } from "discord.js";
-import { EventHandler } from "../types";
+import { Client, Snowflake, VoiceState } from "discord.js";
+import { ClientEventListener } from "../types";
 import { musicPlayers } from "../core/managers";
 import { lavalinkClient } from "../core/client";
 
-export class VoiceStateUpdateHandler implements EventHandler {
-    readonly eventName: Events;
+export class VoiceStateUpdateListener implements ClientEventListener {
+    private readonly client: Client;
 
-    constructor() {
-        this.eventName = Events.VoiceStateUpdate;
+    constructor(client: Client) {
+        this.client = client;
     }
 
     private async handleChannelLeave(guildId: Snowflake) {
@@ -19,7 +19,7 @@ export class VoiceStateUpdateHandler implements EventHandler {
         await lavalinkClient.leaveVoiceChannel(guildId);
     }
 
-    async handle(oldState: VoiceState, newState: VoiceState) {
+    private async handleEvent(oldState: VoiceState, newState: VoiceState) {
         const clientId = oldState.client.user.id;
 
         if (oldState.id !== clientId) {
@@ -31,5 +31,11 @@ export class VoiceStateUpdateHandler implements EventHandler {
         if (newState.channelId === null) {
             await this.handleChannelLeave(guildId);
         }
+    }
+
+    listen() {
+        this.client.on("voiceStateUpdate", (oldState, newState) =>
+            this.handleEvent(oldState, newState).catch(console.error)
+        );
     }
 }

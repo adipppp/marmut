@@ -42,12 +42,10 @@ export class MusicPlayer {
 
     private async handleError(err: Error) {
         console.error(err);
-
         let textChannel = marmut.channels.resolve(this.textChannelId!);
         if (textChannel === null || !textChannel.isSendable()) {
             return;
         }
-
         const errorEmbed = this.createErrorEmbed();
         await textChannel.send({ embeds: [errorEmbed] }).catch(() => {});
     }
@@ -57,29 +55,31 @@ export class MusicPlayer {
 
         if (this.songIdArray.length === 0) {
             this.currentIndex = -1;
+            return;
         } else if (this.currentIndex >= this.songIdArray.length) {
             this.currentIndex = -1;
             await this.removeAllSongs();
-        } else {
-            const nextSongId = this.songIdArray[this.currentIndex];
-            const nextSong = (await prisma.song.findUnique({
-                select: {
-                    title: true,
-                    thumbnailUrl: true,
-                    videoUrl: true,
-                    duration: true,
-                },
-                where: { id: nextSongId },
-            }))!;
-
-            await this.playSong(nextSong);
-
-            const textChannel = marmut.channels.resolve(
-                this.textChannelId!
-            ) as SendableChannels;
-            const embed = createNowPlayingEmbed(nextSong);
-            await textChannel.send({ embeds: [embed] });
+            return;
         }
+
+        const nextSongId = this.songIdArray[this.currentIndex];
+        const nextSong = (await prisma.song.findUnique({
+            select: {
+                title: true,
+                thumbnailUrl: true,
+                videoUrl: true,
+                duration: true,
+            },
+            where: { id: nextSongId },
+        }))!;
+
+        await this.playSong(nextSong);
+
+        const textChannel = marmut.channels.resolve(
+            this.textChannelId!
+        ) as SendableChannels;
+        const embed = createNowPlayingEmbed(nextSong);
+        await textChannel.send({ embeds: [embed] });
     }
 
     private createErrorEmbed() {

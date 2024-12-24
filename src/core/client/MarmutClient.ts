@@ -14,7 +14,7 @@ const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
-class MarmutClient extends Client {
+export class MarmutClient extends Client {
     readonly commands: Collection<string, Command>;
 
     constructor(options: ClientOptions) {
@@ -23,22 +23,15 @@ class MarmutClient extends Client {
     }
 
     private async registerListeners() {
-        const handlersPath = path.join(process.cwd(), "dist", "handlers");
-        const handlerFiles = fs
-            .readdirSync(handlersPath)
+        const listenersPath = path.join(process.cwd(), "dist", "listeners");
+        const listenerFiles = fs
+            .readdirSync(listenersPath)
             .filter((file) => file.endsWith(".js"));
 
-        for (const file of handlerFiles) {
-            const handler = await import(path.join(handlersPath, file));
-            const instance = new handler[Object.keys(handler)[0]]();
-
-            this.on(instance.eventName, async (...args) => {
-                try {
-                    await instance.handle(...args);
-                } catch (err) {
-                    console.error(err);
-                }
-            });
+        for (const file of listenerFiles) {
+            const listenerClass = await import(path.join(listenersPath, file));
+            const listener = new listenerClass[Object.keys(listenerClass)[0]](this);
+            listener.listen();
         }
 
         this.on("error", console.error);
