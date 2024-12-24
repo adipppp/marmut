@@ -11,12 +11,10 @@ import { RepeatMode } from "../../enums";
 import { MusicPlayerErrorCode } from "../../enums/MusicPlayerErrorCode";
 import { MusicPlayerError } from "../../errors";
 import { Song } from "./Song";
-import { createNowPlayingEmbed } from "../../utils/functions";
+import { createNowPlayingEmbed, getVideoId } from "../../utils/functions";
 
 const ERROR_EMOJI = process.env.ERROR_EMOJI;
 const MARMUT_ICON_40PX = process.env.MARMUT_ICON_40PX;
-const VIDEO_URL_REGEX =
-    /https?:\/\/(?:(?:www\.)?youtube\.com\/watch\?(?:[a-zA-Z]+=.*&)*v=|youtu\.be\/)([^&]+)/;
 
 export class MusicPlayer {
     private readonly guildId: Snowflake;
@@ -125,16 +123,6 @@ export class MusicPlayer {
         return nextIndex;
     }
 
-    private getVideoId(videoUrl: string) {
-        const match = videoUrl.match(VIDEO_URL_REGEX);
-        if (match === null) {
-            throw new MusicPlayerError({
-                code: MusicPlayerErrorCode.INVALID_VIDEO_URL,
-            });
-        }
-        return match[1];
-    }
-
     private async playSong(song: Song) {
         const player = lavalinkClient.players.get(this.guildId);
         if (player === undefined) {
@@ -142,7 +130,12 @@ export class MusicPlayer {
                 code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
             });
         }
-        const videoId = this.getVideoId(song.videoUrl);
+        const videoId = getVideoId(song.videoUrl);
+        if (videoId === null) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.INVALID_VIDEO_URL,
+            });
+        }
         await player.playTrack({ track: { identifier: videoId } });
     }
 
