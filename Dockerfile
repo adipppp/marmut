@@ -14,6 +14,8 @@ RUN --mount=type=bind,source=package.json,target=package.json \
 COPY prisma ./prisma
 COPY package.json .
 
+RUN npx prisma generate
+
 FROM deps AS build
 
 RUN --mount=type=bind,source=package.json,target=package.json \
@@ -23,7 +25,6 @@ RUN --mount=type=bind,source=package.json,target=package.json \
 
 COPY . .
 
-RUN npx prisma generate
 RUN npm run build
 
 FROM base AS final
