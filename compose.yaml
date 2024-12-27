@@ -1,5 +1,5 @@
 services:
-  marmut:
+  marmut-beta:
     build:
       context: .
     env_file:

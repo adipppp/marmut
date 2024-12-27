@@ -6,11 +6,11 @@ import {
     TextBasedChannel,
 } from "discord.js";
 import { Player } from "shoukaku";
-import { lavalinkClient, marmut, prisma } from "../client";
-import { RepeatMode } from "../../enums";
-import { MusicPlayerErrorCode } from "../../enums/MusicPlayerErrorCode";
-import { MusicPlayerError } from "../../errors";
 import { Song } from "./Song";
+import { lavalinkClient, marmut, prisma } from "../client";
+import { RepeatMode, MusicPlayerErrorCode } from "../../enums";
+import { MusicPlayerError } from "../../errors";
+import { guildVoiceStateManager } from "../managers";
 import { createNowPlayingEmbed, getVideoId } from "../../utils/functions";
 
 const ERROR_EMOJI = process.env.ERROR_EMOJI;
@@ -50,6 +50,18 @@ export class MusicPlayer {
         await textChannel.send({ embeds: [errorEmbed] }).catch(() => {});
     }
 
+    private handleGuildVoiceState() {
+        const guildVoiceState = guildVoiceStateManager.get(this.guildId);
+        if (guildVoiceState === undefined) {
+            return;
+        }
+        if (guildVoiceState.shouldTriggerAutoDisconnectTimer()) {
+            guildVoiceState.triggerAutoDisconnectTimer();
+        } else if (guildVoiceState.shouldCancelAutoDisconnectTimer()) {
+            guildVoiceState.cancelAutoDisconnectTimer();
+        }
+    }
+
     private async handlePlayerEnd() {
         this.currentIndex = this.getNextIndex();
 
@@ -74,6 +86,8 @@ export class MusicPlayer {
         }))!;
 
         await this.playSong(nextSong);
+
+        this.handleGuildVoiceState();
 
         const textChannel = marmut.channels.resolve(
             this.textChannelId!
@@ -149,6 +163,7 @@ export class MusicPlayer {
         if (this.currentIndex === -1) {
             this.currentIndex = 0;
             await this.playSong(song);
+            this.handleGuildVoiceState();
         }
     }
 
