@@ -36,7 +36,7 @@ export class VoiceStateUpdateListener implements ClientEventListener {
             return;
         }
         const clientVoiceChannelId = clientVoiceState.channelId;
-        if (clientVoiceChannelId === oldState.channelId) {
+        if (clientVoiceChannelId !== oldState.channelId) {
             return;
         }
         const guildVoiceState = guildVoiceStateManager.get(guildId)!;
