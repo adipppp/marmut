@@ -55,7 +55,7 @@ export class GuildVoiceState {
             const guildId = this.guild.id;
             this.timeout = setTimeout(
                 () => leaveVoiceChannel(guildId).catch(console.error),
-                5000
+                300000
             );
         }
     }
