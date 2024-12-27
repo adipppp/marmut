@@ -28,6 +28,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - marmut-network
 volumes:
   db-data:
 secrets:
