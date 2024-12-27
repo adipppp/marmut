@@ -35,5 +35,6 @@ COPY package.json .
 COPY --from=deps /usr/src/app/node_modules ./node_modules
 COPY --from=build /usr/src/app/dist ./dist
 COPY --from=deps /usr/src/app/prisma ./prisma
+COPY db ./db
 
 CMD npm run prod
