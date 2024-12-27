@@ -7,6 +7,7 @@
     "build": "npx tsc",
     "clean": "npx rimraf dist",
     "dev": "node dist/index.js",
+    "prod": "npx prisma db push && node dist/index.js",
     "start": "npm run clean && npm run build && npm run dev",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
