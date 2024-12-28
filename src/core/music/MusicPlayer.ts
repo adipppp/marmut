@@ -67,9 +67,11 @@ export class MusicPlayer {
 
         if (this.songIdArray.length === 0) {
             this.currentIndex = -1;
+            this.handleGuildVoiceState();
             return;
         } else if (this.currentIndex >= this.songIdArray.length) {
             this.currentIndex = -1;
+            this.handleGuildVoiceState();
             await this.removeAllSongs();
             return;
         }
