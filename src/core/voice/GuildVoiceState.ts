@@ -53,10 +53,15 @@ export class GuildVoiceState {
     triggerAutoDisconnectTimer() {
         if (this.timeout === null) {
             const guildId = this.guild.id;
-            this.timeout = setTimeout(
-                () => leaveVoiceChannel(guildId).catch(console.error),
-                300000
-            );
+            this.timeout = setTimeout(async () => {
+                try {
+                    await leaveVoiceChannel(guildId);
+                } catch (err) {
+                    console.error(err);
+                    return;
+                }
+                this.cancelAutoDisconnectTimer();
+            }, 300000);
         }
     }
 
