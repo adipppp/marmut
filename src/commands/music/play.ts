@@ -5,7 +5,6 @@ import {
     SlashCommandBuilder,
 } from "discord.js";
 import { LoadType, Track } from "shoukaku";
-import { lavalinkClient } from "../../core/client";
 import { Song } from "../../core/music";
 import { musicPlayers } from "../../core/managers";
 import { LavalinkErrorCode, ValidationErrorCode } from "../../enums";
@@ -17,8 +16,8 @@ import {
     createAddedToQueueEmbed,
     createNowPlayingEmbed,
     getLavalinkErrorMessage,
+    getSearchResults,
     getValidationErrorMessage,
-    getVideoId,
     inVoiceChannel,
     joinVoiceChannel,
 } from "../../utils/functions";
@@ -71,26 +70,8 @@ export class PlayCommand implements Command {
         }
     }
 
-    private async getSearchResults(query: string) {
-        const node = lavalinkClient.options.nodeResolver(lavalinkClient.nodes);
-        if (node === undefined) {
-            throw new LavalinkError({
-                code: LavalinkErrorCode.NO_AVAILABLE_NODES,
-            });
-        }
-        let identifier;
-        const videoId = getVideoId(query);
-        if (videoId !== null) {
-            identifier = videoId;
-        } else {
-            identifier = `ytsearch:${query}`;
-        }
-        const response = await node.rest.resolve(identifier);
-        return response;
-    }
-
     private async getTrack(query: string) {
-        const response = await this.getSearchResults(query);
+        const response = await getSearchResults(query);
         if (
             response === undefined ||
             (response.loadType !== LoadType.TRACK &&
