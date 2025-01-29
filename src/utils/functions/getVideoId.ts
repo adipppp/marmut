@@ -1,4 +1,4 @@
-const ytHostnames = new Set(["www.youtube.com", "youtube.com", "youtu.be"]);
+const ytHostnames = new Set(["www.youtube.com", "youtube.com", "youtu.be", "m.youtube.com", "music.youtube.com"]);
 
 export function getVideoId(input: string) {
     let url;
@@ -15,9 +15,15 @@ export function getVideoId(input: string) {
         return null;
     }
 
+    const splittedPathname = url.pathname.split("/");
+
     if (url.hostname === "youtu.be") {
-        return url.pathname.split("/")[1];
-    } else {
-        return url.searchParams.get("v");
+        return splittedPathname[1];
     }
+
+    if (splittedPathname[1] === "shorts") {
+        return splittedPathname[2];
+    }
+
+    return url.searchParams.get("v");
 }
