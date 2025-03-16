@@ -38,5 +38,14 @@
     "rimraf": "^5.0.10",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@discordjs/opus",
+      "@prisma/client",
+      "@prisma/engines",
+      "ffmpeg-static",
+      "prisma"
+    ]
   }
 }
