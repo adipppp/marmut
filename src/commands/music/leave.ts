@@ -13,7 +13,6 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
-    getValidationErrorMessage,
     inVoiceChannel,
 } from "../../utils/functions";
 
@@ -58,12 +57,12 @@ export class LeaveCommand implements Command {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (!(err instanceof ValidationError)) {
-                throw err;
+            if (err instanceof Error) {
+                interaction
+                    .reply({ content: err.message, ephemeral: true })
+                    .catch(() => {});
             }
-            const content = getValidationErrorMessage(err);
-            await interaction.reply({ content, ephemeral: true });
-            return;
+            throw err;
         }
 
         const guildId = interaction.guildId!;
@@ -73,7 +72,7 @@ export class LeaveCommand implements Command {
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)
             .setDescription(
-                `${LEAVE_EMOJI}  -  Disconnected from the voice channel`
+                `${LEAVE_EMOJI}  -  Disconnected from the voice channel`,
             );
 
         await interaction.reply({ embeds: [embed] });

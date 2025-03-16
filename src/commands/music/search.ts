@@ -19,7 +19,6 @@ import {
     createAddedToQueueEmbed,
     createNowPlayingEmbed,
     getSearchResults,
-    getValidationErrorMessage,
     inVoiceChannel,
     joinVoiceChannel,
 } from "../../utils/functions";
@@ -38,12 +37,12 @@ export class SearchCommand implements Command {
                 builder
                     .setName("query")
                     .setDescription("Something to search.")
-                    .setRequired(true)
+                    .setRequired(true),
             );
     }
 
     private validatePreconditions(
-        interaction: ButtonInteraction | ChatInputCommandInteraction
+        interaction: ButtonInteraction | ChatInputCommandInteraction,
     ) {
         const guild = interaction.guild!;
         const member = interaction.member as GuildMember;
@@ -74,7 +73,7 @@ export class SearchCommand implements Command {
 
     private validateUser(
         interaction: ButtonInteraction,
-        originalUserId: Snowflake
+        originalUserId: Snowflake,
     ) {
         if (interaction.user.id !== originalUserId) {
             throw new ValidationError({
@@ -111,7 +110,7 @@ export class SearchCommand implements Command {
                     thumbnailUrl: result.info.artworkUrl ?? "",
                     videoUrl: result.info.uri ?? "",
                     duration: result.info.length,
-                })
+                }),
         );
     }
 
@@ -125,7 +124,7 @@ export class SearchCommand implements Command {
 
     private async handleValidInteraction(
         interaction: ButtonInteraction,
-        songs: Song[]
+        songs: Song[],
     ) {
         await interaction.deferReply();
 
@@ -148,9 +147,9 @@ export class SearchCommand implements Command {
         try {
             await player.play(song, interaction.channel!);
         } catch (err) {
-            await interaction.editReply(
-                "Bot is not connected to any voice channel."
-            );
+            interaction
+                .editReply("Bot is not connected to any voice channel.")
+                .catch(() => {});
             throw err;
         }
 
@@ -161,12 +160,12 @@ export class SearchCommand implements Command {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (!(err instanceof ValidationError)) {
-                throw err;
+            if (err instanceof Error) {
+                interaction
+                    .reply({ content: err.message, ephemeral: true })
+                    .catch(() => {});
             }
-            const content = getValidationErrorMessage(err);
-            await interaction.reply({ content, ephemeral: true });
-            return;
+            throw err;
         }
 
         await interaction.deferReply();
@@ -210,17 +209,20 @@ export class SearchCommand implements Command {
                 collector.stop();
 
                 rows.forEach((row) =>
-                    row.components.forEach((button) => button.setDisabled(true))
+                    row.components.forEach((button) =>
+                        button.setDisabled(true),
+                    ),
                 );
 
                 interaction.message.edit({ components: rows });
                 await this.handleValidInteraction(interaction, songs);
             } catch (err) {
-                if (!(err instanceof ValidationError)) {
-                    throw err;
+                console.error(err);
+                if (err instanceof Error) {
+                    interaction
+                        .reply({ content: err.message, ephemeral: true })
+                        .catch(() => {});
                 }
-                const content = getValidationErrorMessage(err);
-                await interaction.reply({ content, ephemeral: true });
             }
         });
     }

@@ -15,9 +15,7 @@ import {
     clientIsPlayingIn,
     createAddedToQueueEmbed,
     createNowPlayingEmbed,
-    getLavalinkErrorMessage,
     getSearchResults,
-    getValidationErrorMessage,
     inVoiceChannel,
     joinVoiceChannel,
 } from "../../utils/functions";
@@ -36,9 +34,9 @@ export class PlayCommand implements Command {
                 builder
                     .setName("song")
                     .setDescription(
-                        "The song to play. Can also be a YouTube video URL."
+                        "The song to play. Can also be a YouTube video URL.",
                     )
-                    .setRequired(true)
+                    .setRequired(true),
             );
     }
 
@@ -112,9 +110,10 @@ export class PlayCommand implements Command {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (err instanceof ValidationError) {
-                const content = getValidationErrorMessage(err);
-                interaction.reply({ content, ephemeral: true }).catch(() => {});
+            if (err instanceof Error) {
+                interaction
+                    .reply({ content: err.message, ephemeral: true })
+                    .catch(() => {});
             }
             throw err;
         }
@@ -127,10 +126,8 @@ export class PlayCommand implements Command {
         try {
             trackResult = await this.getTrack(query);
         } catch (err) {
-            if (err instanceof LavalinkError) {
-                interaction
-                    .editReply(getLavalinkErrorMessage(err))
-                    .catch(() => {});
+            if (err instanceof Error) {
+                interaction.editReply(err.message).catch(() => {});
             }
             throw err;
         }

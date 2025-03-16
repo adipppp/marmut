@@ -9,7 +9,6 @@ import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
     createNowPlayingEmbed,
-    getValidationErrorMessage,
     inVoiceChannel,
 } from "../../utils/functions";
 import { musicPlayers } from "../../core/managers";
@@ -55,12 +54,12 @@ export class ResumeCommand implements Command {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (!(err instanceof ValidationError)) {
-                throw err;
+            if (err instanceof Error) {
+                interaction
+                    .reply({ content: err.message, ephemeral: true })
+                    .catch(() => {});
             }
-            const content = getValidationErrorMessage(err);
-            await interaction.reply({ content, ephemeral: true });
-            return;
+            throw err;
         }
 
         const player = musicPlayers.get(interaction.guildId!)!;

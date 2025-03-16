@@ -11,7 +11,6 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
-    getValidationErrorMessage,
     inVoiceChannel,
 } from "../../utils/functions";
 import { musicPlayers } from "../../core/managers";
@@ -36,8 +35,8 @@ export class RepeatCommand implements Command {
                     .addChoices(
                         { name: "off", value: "off" },
                         { name: "song", value: "song" },
-                        { name: "queue", value: "queue" }
-                    )
+                        { name: "queue", value: "queue" },
+                    ),
             );
     }
 
@@ -115,12 +114,12 @@ export class RepeatCommand implements Command {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (!(err instanceof ValidationError)) {
-                throw err;
+            if (err instanceof Error) {
+                interaction
+                    .reply({ content: err.message, ephemeral: true })
+                    .catch(() => {});
             }
-            const content = getValidationErrorMessage(err);
-            await interaction.reply({ content, ephemeral: true });
-            return;
+            throw err;
         }
 
         const inputMode = interaction.options.getString("mode");

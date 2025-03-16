@@ -12,4 +12,19 @@ export class LavalinkError extends Error {
         super(options.message);
         this.code = options.code;
     }
+
+    get message(): string {
+        if (this.message !== undefined) {
+            return this.message;
+        }
+
+        switch (this.code) {
+            case LavalinkErrorCode.NO_AVAILABLE_NODES:
+                return "No Lavalink nodes is available.";
+            case LavalinkErrorCode.TRACK_NOT_FOUND:
+                return "Could not find the song.";
+            default:
+                return "An unknown error occurred.";
+        }
+    }
 }

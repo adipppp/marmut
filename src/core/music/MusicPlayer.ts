@@ -92,7 +92,7 @@ export class MusicPlayer {
         this.handleGuildVoiceState();
 
         const textChannel = marmut.channels.resolve(
-            this.textChannelId!
+            this.textChannelId!,
         ) as SendableChannels;
         const embed = createNowPlayingEmbed(nextSong);
         await textChannel.send({ embeds: [embed] });
@@ -104,7 +104,7 @@ export class MusicPlayer {
             .setTimestamp()
             .setFooter({ text: "Marmut", iconURL: MARMUT_ICON_40PX })
             .setDescription(
-                `${ERROR_EMOJI}  -  An error has occured on the music player!`
+                `${ERROR_EMOJI}  -  An error has occured on the music player!`,
             );
     }
 

@@ -13,7 +13,6 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientIsPlayingIn,
-    getValidationErrorMessage,
     inVoiceChannel,
     joinVoiceChannel,
 } from "../../utils/functions";
@@ -34,9 +33,9 @@ export class JoinCommand implements Command {
                 builder
                     .setName("channel")
                     .setDescription(
-                        "The voice channel to connect to. Defaults to your current voice channel."
+                        "The voice channel to connect to. Defaults to your current voice channel.",
                     )
-                    .setRequired(false)
+                    .setRequired(false),
             );
     }
 
@@ -93,12 +92,12 @@ export class JoinCommand implements Command {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (!(err instanceof ValidationError)) {
-                throw err;
+            if (err instanceof Error) {
+                interaction
+                    .reply({ content: err.message, ephemeral: true })
+                    .catch(() => {});
             }
-            const content = getValidationErrorMessage(err);
-            await interaction.reply({ content, ephemeral: true });
-            return;
+            throw err;
         }
 
         const guild = interaction.guild!;
