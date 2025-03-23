@@ -92,7 +92,7 @@ export class MusicPlayer {
         this.handleGuildVoiceState();
 
         const textChannel = marmut.channels.resolve(
-            this.textChannelId!,
+            this.textChannelId!
         ) as SendableChannels;
         const embed = createNowPlayingEmbed(nextSong);
         await textChannel.send({ embeds: [embed] });
@@ -104,7 +104,7 @@ export class MusicPlayer {
             .setTimestamp()
             .setFooter({ text: "Marmut", iconURL: MARMUT_ICON_40PX })
             .setDescription(
-                `${ERROR_EMOJI}  -  An error has occured on the music player!`,
+                `${ERROR_EMOJI}  -  An error has occured on the music player!`
             );
     }
 
@@ -239,6 +239,30 @@ export class MusicPlayer {
         this.songIdArray.splice(index, 1);
 
         return deletedSong;
+    }
+
+    async seek(position: number) {
+        if (position < 0) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.SEEK_POSITION_OUT_OF_RANGE,
+            });
+        }
+
+        const trackDuration = this.getCurrentSongPlayback();
+        if (position > trackDuration) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.SEEK_POSITION_OUT_OF_RANGE,
+            });
+        }
+
+        const player = lavalinkClient.players.get(this.guildId);
+        if (player === undefined) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
+            });
+        }
+
+        await player.seekTo(position * 1000);
     }
 
     getVolume() {
