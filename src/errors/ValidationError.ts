@@ -14,46 +14,31 @@ export class ValidationError extends Error {
     }
 
     get message(): string {
-        if (this.message !== undefined) {
-            return this.message;
+        if (super.message !== "") {
+            return super.message;
         }
 
-        let content;
         switch (this.code) {
             case ValidationErrorCode.MEMBER_NOT_IN_VOICE:
-                content =
-                    "You need to be in a voice channel to use this command.";
-                break;
+                return "You need to be in a voice channel to use this command.";
             case ValidationErrorCode.CLIENT_NOT_IN_VOICE:
-                content = "Bot is not connected to any voice channel.";
-                break;
+                return "Bot is not connected to any voice channel.";
             case ValidationErrorCode.MEMBER_NOT_IN_SAME_VOICE:
-                content =
-                    "You need to be in the same voice channel as the bot.";
-                break;
+                return "You need to be in the same voice channel as the bot.";
             case ValidationErrorCode.QUEUE_MENU_NOT_FOR_USER:
-                content =
-                    "You cannot interact with this menu. Please create your own by using the /queue command.";
-                break;
+                return "You cannot interact with this menu. Please create your own by using the /queue command.";
             case ValidationErrorCode.SEARCH_MENU_NOT_FOR_USER:
-                content =
-                    "You cannot interact with this menu. Please create your own by using the /search command.";
-                break;
+                return "You cannot interact with this menu. Please create your own by using the /search command.";
             case ValidationErrorCode.NON_POSITIVE_SONG_POSITION:
-                content = "Position must be greater than 0.";
-                break;
+                return "Position must be greater than 0.";
             case ValidationErrorCode.INVALID_VOICE_CHANNEL:
-                content = "The channel specified is not a voice channel.";
-                break;
+                return "The channel specified is not a voice channel.";
             case ValidationErrorCode.MISSING_VOICE_CHANNEL:
-                content =
-                    "You need to specify or be in a voice channel to use this command.";
-                break;
+                return "You need to specify or be in a voice channel to use this command.";
             case ValidationErrorCode.NON_JOINABLE_VOICE_CHANNEL:
-                content = "Unable to connect to the voice channel.";
-                break;
+                return "Unable to connect to the voice channel.";
+            default:
+                return "An unknown error occurred.";
         }
-
-        return content;
     }
 }

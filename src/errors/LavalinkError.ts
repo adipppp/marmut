@@ -14,8 +14,8 @@ export class LavalinkError extends Error {
     }
 
     get message(): string {
-        if (this.message !== undefined) {
-            return this.message;
+        if (super.message !== "") {
+            return super.message;
         }
 
         switch (this.code) {
