@@ -162,9 +162,18 @@ export class MusicPlayer {
     async play(song: Song, channel: TextBasedChannel) {
         await this.addSong(song);
         this.textChannelId = channel.id;
+
         if (this.currentIndex === -1) {
+            try {
+                await this.playSong(song);
+            } catch (err) {
+                console.error(err);
+                this.handleError(err).catch(() => {});
+                this.removeSong(this.currentIndex).catch(() => {});
+                throw err;
+            }
+
             this.currentIndex = 0;
-            await this.playSong(song);
             this.handleGuildVoiceState();
         }
     }
