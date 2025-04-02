@@ -37,12 +37,12 @@ export class SearchCommand implements Command {
                 builder
                     .setName("query")
                     .setDescription("Something to search.")
-                    .setRequired(true),
+                    .setRequired(true)
             );
     }
 
     private validatePreconditions(
-        interaction: ButtonInteraction | ChatInputCommandInteraction,
+        interaction: ButtonInteraction | ChatInputCommandInteraction
     ) {
         const guild = interaction.guild!;
         const member = interaction.member as GuildMember;
@@ -73,7 +73,7 @@ export class SearchCommand implements Command {
 
     private validateUser(
         interaction: ButtonInteraction,
-        originalUserId: Snowflake,
+        originalUserId: Snowflake
     ) {
         if (interaction.user.id !== originalUserId) {
             throw new ValidationError({
@@ -109,8 +109,8 @@ export class SearchCommand implements Command {
                     title: result.info.title,
                     thumbnailUrl: result.info.artworkUrl ?? "",
                     videoUrl: result.info.uri ?? "",
-                    duration: result.info.length,
-                }),
+                    duration: BigInt(result.info.length),
+                })
         );
     }
 
@@ -124,7 +124,7 @@ export class SearchCommand implements Command {
 
     private async handleValidInteraction(
         interaction: ButtonInteraction,
-        songs: Song[],
+        songs: Song[]
     ) {
         await interaction.deferReply();
 
@@ -209,9 +209,7 @@ export class SearchCommand implements Command {
                 collector.stop();
 
                 rows.forEach((row) =>
-                    row.components.forEach((button) =>
-                        button.setDisabled(true),
-                    ),
+                    row.components.forEach((button) => button.setDisabled(true))
                 );
 
                 interaction.message.edit({ components: rows });

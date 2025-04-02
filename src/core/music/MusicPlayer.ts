@@ -77,7 +77,7 @@ export class MusicPlayer {
         }
 
         const nextSongId = this.songIdArray[this.currentIndex];
-        const nextSong = (await prisma.song.findUnique({
+        const result = (await prisma.song.findUnique({
             select: {
                 title: true,
                 thumbnailUrl: true,
@@ -86,6 +86,12 @@ export class MusicPlayer {
             },
             where: { id: nextSongId },
         }))!;
+        const nextSong = {
+            title: result.title,
+            thumbnailUrl: result.thumbnailUrl,
+            videoUrl: result.videoUrl,
+            duration: BigInt(result.duration),
+        };
 
         await this.playSong(nextSong);
 
@@ -109,7 +115,8 @@ export class MusicPlayer {
     }
 
     private async addSong(song: Song) {
-        const createdSong = await prisma.song.create({ data: song });
+        const newSong = { ...song, duration: song.duration.toString() };
+        const createdSong = await prisma.song.create({ data: newSong });
         this.songIdArray.push(createdSong.id);
         return createdSong;
     }
@@ -313,7 +320,14 @@ export class MusicPlayer {
 
     async getCurrentSong() {
         const songId = this.songIdArray[this.currentIndex];
-        return await prisma.song.findUnique({ where: { id: songId } });
+        const result = await prisma.song.findUnique({ where: { id: songId } });
+        if (result === null) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.SONG_NOT_FOUND,
+            });
+        }
+        const currentSong = { ...result, duration: BigInt(result.duration) };
+        return currentSong;
     }
 
     getCurrentSongPlayback() {

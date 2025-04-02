@@ -24,6 +24,6 @@ export interface SongData {
     title: string;
     thumbnailUrl: string;
     videoUrl: string;
-    duration: number;
+    duration: bigint;
     volume?: number;
 }

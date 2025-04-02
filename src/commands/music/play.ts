@@ -34,9 +34,9 @@ export class PlayCommand implements Command {
                 builder
                     .setName("song")
                     .setDescription(
-                        "The song to play. Can also be a YouTube video URL.",
+                        "The song to play. Can also be a YouTube video URL."
                     )
-                    .setRequired(true),
+                    .setRequired(true)
             );
     }
 
@@ -94,7 +94,7 @@ export class PlayCommand implements Command {
             title: info.title,
             thumbnailUrl: info.artworkUrl ?? "",
             videoUrl: info.uri ?? "",
-            duration: info.length,
+            duration: BigInt(info.length),
         });
     }
 

@@ -3,4 +3,5 @@ export const enum MusicPlayerErrorCode {
     PLAYER_NOT_FOUND,
     VOLUME_OUT_OF_RANGE,
     SEEK_POSITION_OUT_OF_RANGE,
+    SONG_NOT_FOUND,
 }

@@ -18,5 +18,5 @@ model Song {
   title        String @db.VarChar(255)
   thumbnailUrl String @db.VarChar(255)
   videoUrl     String @db.VarChar(255)
-  duration     Int
+  duration     String @db.VarChar(255)
 }
