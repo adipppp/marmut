@@ -108,5 +108,21 @@ export class MarmutClient extends Client {
 }
 
 export const marmut = new MarmutClient({
-    intents: [GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.Guilds],
+    intents: [
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.GuildPresences,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildScheduledEvents,
+        GatewayIntentBits.GuildIntegrations,
+        GatewayIntentBits.GuildWebhooks,
+        GatewayIntentBits.GuildInvites,
+        GatewayIntentBits.GuildMessageTyping,
+        GatewayIntentBits.GuildMessagePolls,
+        GatewayIntentBits.GuildExpressions,
+        GatewayIntentBits.GuildModeration,
+    ],
 });
