@@ -86,7 +86,7 @@ export class MarmutClient extends Client {
 
     async login(token: string) {
         await this.loadCommands();
-        await this.registerCommands();
+        // await this.registerCommands();
         await this.registerListeners();
 
         const destroy = this.destroy.bind(this);
