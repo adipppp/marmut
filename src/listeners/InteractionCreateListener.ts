@@ -2,17 +2,16 @@ import {
     BaseInteraction,
     ChatInputCommandInteraction,
     Collection,
-    Events,
 } from "discord.js";
-import { marmut } from "../core/client";
+import { MarmutClient } from "../core/client";
 import { cooldowns } from "../core/managers";
-import { EventHandler } from "../types";
+import { ClientEventListener } from "../types";
 
-export class InteractionCreateHandler implements EventHandler {
-    readonly eventName: Events;
+export class InteractionCreateListener implements ClientEventListener {
+    private readonly marmutClient: MarmutClient;
 
-    constructor() {
-        this.eventName = Events.InteractionCreate;
+    constructor(marmutClient: MarmutClient) {
+        this.marmutClient = marmutClient;
     }
 
     private getRemainingDuration(interaction: ChatInputCommandInteraction) {
@@ -21,7 +20,7 @@ export class InteractionCreateHandler implements EventHandler {
         const guildId = interaction.guildId!;
         const compositeId = BigInt(userId) ^ BigInt(guildId);
 
-        const commands = marmut.commands;
+        const commands = this.marmutClient.commands;
 
         const command = commands.get(commandName)!;
         const commandNames = cooldowns.get(compositeId)!;
@@ -48,7 +47,7 @@ export class InteractionCreateHandler implements EventHandler {
         commandName: string,
         compositeId: bigint
     ) {
-        const commands = marmut.commands;
+        const commands = this.marmutClient.commands;
 
         const command = commands.get(commandName)!;
         const cooldownDuration = command.cooldown;
@@ -66,7 +65,7 @@ export class InteractionCreateHandler implements EventHandler {
         return commandNames !== undefined && commandNames.has(commandName);
     }
 
-    async handle(interaction: BaseInteraction) {
+    private async handleEvent(interaction: BaseInteraction) {
         if (!interaction.isChatInputCommand()) return;
 
         const commandName = interaction.commandName;
@@ -86,7 +85,7 @@ export class InteractionCreateHandler implements EventHandler {
             return;
         }
 
-        const commands = marmut.commands;
+        const commands = this.marmutClient.commands;
         const command = commands.get(commandName)!;
 
         this.setCooldown(commandName, compositeId);
@@ -99,5 +98,11 @@ export class InteractionCreateHandler implements EventHandler {
         }
 
         await this.deleteCooldownOnTimeout(commandName, compositeId);
+    }
+
+    listen() {
+        this.marmutClient.on("interactionCreate", (interaction) =>
+            this.handleEvent(interaction).catch(console.error)
+        );
     }
 }

@@ -1,28 +1,24 @@
 import {
     ChatInputCommandInteraction,
-    Colors,
-    EmbedBuilder,
-    Events,
     GuildMember,
     SharedSlashCommand,
     SlashCommandBuilder,
-    VoiceBasedChannel,
 } from "discord.js";
+import { LoadType, Track } from "shoukaku";
+import { Song } from "../../core/music";
+import { musicPlayers } from "../../core/managers";
+import { LavalinkErrorCode, ValidationErrorCode } from "../../enums";
+import { LavalinkError, ValidationError } from "../../errors";
 import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientIsPlayingIn,
-    getValidationErrorMessage,
+    createAddedToQueueEmbed,
+    createNowPlayingEmbed,
+    getSearchResults,
     inVoiceChannel,
+    joinVoiceChannel,
 } from "../../utils/functions";
-import { joinVoiceChannel } from "@discordjs/voice";
-import YouTube, { Video } from "youtube-sr";
-import { Song } from "../../core/music";
-import { musicPlayers } from "../../core/managers";
-import { ValidationError, ValidationErrorCode } from "../../errors";
-import EventEmitter, { once } from "events";
-
-const MARMUT_ICON_40PX = process.env.MARMUT_ICON_40PX;
 
 export class PlayCommand implements Command {
     readonly cooldown: number;
@@ -72,90 +68,88 @@ export class PlayCommand implements Command {
         }
     }
 
-    private joinVoiceChannel(channel: VoiceBasedChannel) {
-        const guild = channel.guild;
-        const guildId = guild.id;
-        const channelId = channel.id;
-        const adapterCreator = guild.voiceAdapterCreator;
-
-        joinVoiceChannel({ guildId, channelId, adapterCreator });
-    }
-
-    private async getVideo(query: string) {
-        if (YouTube.validate(query, "VIDEO")) {
-            return await YouTube.getVideo(query);
+    private async getTrack(query: string) {
+        const response = await getSearchResults(query);
+        if (
+            response === undefined ||
+            (response.loadType !== LoadType.TRACK &&
+                response.loadType !== LoadType.SEARCH) ||
+            (response.loadType === LoadType.SEARCH &&
+                response.data.length === 0)
+        ) {
+            throw new LavalinkError({
+                code: LavalinkErrorCode.TRACK_NOT_FOUND,
+            });
+        }
+        if (response.loadType === LoadType.SEARCH) {
+            return response.data[0];
         } else {
-            return await YouTube.searchOne(query);
+            return response.data;
         }
     }
 
-    private createSong(video: Video) {
+    private createSong(track: Track) {
+        const info = track.info;
         return new Song({
-            title: video.title!,
-            thumbnailUrl: video.thumbnail!.url!,
-            videoUrl: video.url,
-            duration: video.duration!,
+            title: info.title,
+            thumbnailUrl: info.artworkUrl ?? "",
+            videoUrl: info.uri ?? "",
+            duration: BigInt(info.length),
         });
     }
 
     private createEmbed(song: Song, currentIndex: number) {
-        let description;
         if (currentIndex === -1) {
-            description = `:arrow_forward:  -  Now Playing\n[${song.title}](${song.videoUrl})`;
+            return createNowPlayingEmbed(song);
         } else {
-            description = `:white_check_mark:  -  Added to queue\n[${song.title}](${song.videoUrl})`;
+            return createAddedToQueueEmbed(song);
         }
-
-        return new EmbedBuilder()
-            .setColor(Colors.Red)
-            .setTimestamp()
-            .setThumbnail(song.thumbnailUrl)
-            .setFooter({ text: "Marmut", iconURL: MARMUT_ICON_40PX })
-            .setDescription(description);
     }
 
     async run(interaction: ChatInputCommandInteraction) {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (!(err instanceof ValidationError)) {
-                throw err;
+            if (err instanceof Error) {
+                interaction
+                    .reply({ content: err.message, ephemeral: true })
+                    .catch(() => {});
             }
-            const content = getValidationErrorMessage(err);
-            await interaction.reply({ content, ephemeral: true });
-            return;
+            throw err;
         }
 
         await interaction.deferReply();
 
         const query = interaction.options.getString("song", true);
-        const result = await this.getVideo(query);
 
-        if (!result) {
-            await interaction.editReply("Could not find the song.");
-            return;
+        let trackResult;
+        try {
+            trackResult = await this.getTrack(query);
+        } catch (err) {
+            if (err instanceof Error) {
+                interaction.editReply(err.message).catch(() => {});
+            }
+            throw err;
         }
 
         const member = interaction.member as GuildMember;
         const guild = interaction.guild!;
 
         if (!clientInSameVoiceChannelAs(member) && !clientIsPlayingIn(guild)) {
-            this.joinVoiceChannel(member.voice.channel!);
-            const client = interaction.client as unknown;
-            await once(client as EventEmitter, Events.VoiceStateUpdate);
+            await joinVoiceChannel(member.voice.channel!);
         }
 
         const guildId = guild.id;
         const player = musicPlayers.get(guildId)!;
-        const song = this.createSong(result);
+        const song = this.createSong(trackResult);
         const currentIndex = player.getCurrentIndex();
 
         try {
             await player.play(song, interaction.channel!);
         } catch (err) {
-            await interaction.editReply(
-                "Bot is not connected to any voice channel."
-            );
+            interaction
+                .editReply("Bot is not connected to any voice channel.")
+                .catch(() => {});
             throw err;
         }
 

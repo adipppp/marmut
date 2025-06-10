@@ -1,7 +1,5 @@
 import {
     ChatInputCommandInteraction,
-    Colors,
-    EmbedBuilder,
     GuildMember,
     SharedSlashCommand,
     SlashCommandBuilder,
@@ -10,14 +8,12 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
-    getValidationErrorMessage,
+    createNowPlayingEmbed,
     inVoiceChannel,
 } from "../../utils/functions";
-import { Song } from "../../core/music";
 import { musicPlayers } from "../../core/managers";
-import { ValidationError, ValidationErrorCode } from "../../errors";
-
-const MARMUT_ICON_40PX = process.env.MARMUT_ICON_40PX;
+import { ValidationErrorCode } from "../../enums";
+import { ValidationError } from "../../errors";
 
 export class ResumeCommand implements Command {
     readonly cooldown: number;
@@ -54,27 +50,16 @@ export class ResumeCommand implements Command {
         }
     }
 
-    private createEmbed(song: Song) {
-        return new EmbedBuilder()
-            .setColor(Colors.Red)
-            .setTimestamp()
-            .setThumbnail(song.thumbnailUrl)
-            .setFooter({ text: "Marmut", iconURL: MARMUT_ICON_40PX })
-            .setDescription(
-                `:arrow_forward:  -  Now Playing\n[${song.title}](${song.videoUrl})`
-            );
-    }
-
     async run(interaction: ChatInputCommandInteraction) {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (!(err instanceof ValidationError)) {
-                throw err;
+            if (err instanceof Error) {
+                interaction
+                    .reply({ content: err.message, ephemeral: true })
+                    .catch(() => {});
             }
-            const content = getValidationErrorMessage(err);
-            await interaction.reply({ content, ephemeral: true });
-            return;
+            throw err;
         }
 
         const player = musicPlayers.get(interaction.guildId!)!;
@@ -87,7 +72,7 @@ export class ResumeCommand implements Command {
             return;
         }
 
-        if (!player.unpause()) {
+        if (!(await player.unpause())) {
             await interaction.reply({
                 content: "Song is not paused.",
                 ephemeral: true,
@@ -96,7 +81,7 @@ export class ResumeCommand implements Command {
         }
 
         const currentSong = (await player.getCurrentSong())!;
-        const embed = this.createEmbed(currentSong);
+        const embed = createNowPlayingEmbed(currentSong);
 
         await interaction.reply({ embeds: [embed] });
     }

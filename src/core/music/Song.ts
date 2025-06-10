@@ -4,7 +4,7 @@ export class Song {
     title: string;
     thumbnailUrl: string;
     videoUrl: string;
-    duration: number;
+    duration: bigint;
 
     constructor(data: SongData) {
         this.title = data.title;

@@ -41,11 +41,12 @@ export class SearchView {
             return "";
         }
 
+        const songCount = Math.min(songs.length, 10);
         let desc = `${NUMBER_EMOJIS[0].padEnd(8)}[${songs[0].title}](${
             songs[0].videoUrl
         })`;
 
-        for (let i = 1; i < songs.length; i++) {
+        for (let i = 1; i < songCount; i++) {
             const song = songs[i];
             desc += `\n\n[${NUMBER_EMOJIS[i].padEnd(8)}${song.title}](${
                 song.videoUrl
@@ -56,9 +57,10 @@ export class SearchView {
     }
 
     private createActionRow(songs: Song[], start: number) {
+        const songCount = Math.min(songs.length, 10);
         const row = new ActionRowBuilder<ButtonBuilder>();
         let j = start;
-        for (let i = 0; i < songs.length; i++) {
+        for (let i = 0; i < songCount; i++) {
             const button = this.createButton(j++);
             row.addComponents(button);
         }

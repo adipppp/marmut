@@ -6,16 +6,15 @@ import {
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
+import { lavalinkClient } from "../../core/client";
+import { ValidationErrorCode } from "../../enums";
+import { ValidationError } from "../../errors";
 import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
-    getValidationErrorMessage,
     inVoiceChannel,
 } from "../../utils/functions";
-import { getVoiceConnection } from "@discordjs/voice";
-import { musicPlayers } from "../../core/managers";
-import { ValidationError, ValidationErrorCode } from "../../errors";
 
 const LEAVE_EMOJI = process.env.LEAVE_EMOJI;
 
@@ -58,26 +57,22 @@ export class LeaveCommand implements Command {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (!(err instanceof ValidationError)) {
-                throw err;
+            if (err instanceof Error) {
+                interaction
+                    .reply({ content: err.message, ephemeral: true })
+                    .catch(() => {});
             }
-            const content = getValidationErrorMessage(err);
-            await interaction.reply({ content, ephemeral: true });
-            return;
+            throw err;
         }
 
         const guildId = interaction.guildId!;
 
-        const player = musicPlayers.get(guildId)!;
-        await player.stop();
-
-        const connection = getVoiceConnection(guildId);
-        connection?.destroy();
+        await lavalinkClient.leaveVoiceChannel(guildId);
 
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)
             .setDescription(
-                `${LEAVE_EMOJI}  -  Disconnected from the voice channel`
+                `${LEAVE_EMOJI}  -  Disconnected from the voice channel`,
             );
 
         await interaction.reply({ embeds: [embed] });

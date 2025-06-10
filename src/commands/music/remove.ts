@@ -10,11 +10,11 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
-    getValidationErrorMessage,
     inVoiceChannel,
 } from "../../utils/functions";
 import { musicPlayers } from "../../core/managers";
-import { ValidationError, ValidationErrorCode } from "../../errors";
+import { ValidationErrorCode } from "../../enums";
+import { ValidationError } from "../../errors";
 
 export class RemoveCommand implements Command {
     readonly cooldown: number;
@@ -30,9 +30,9 @@ export class RemoveCommand implements Command {
                 builder
                     .setName("position")
                     .setDescription(
-                        "The position of the song in the queue. Starts from 1."
+                        "The position of the song in the queue. Starts from 1.",
                     )
-                    .setRequired(true)
+                    .setRequired(true),
             );
     }
 
@@ -71,12 +71,12 @@ export class RemoveCommand implements Command {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (!(err instanceof ValidationError)) {
-                throw err;
+            if (err instanceof Error) {
+                interaction
+                    .reply({ content: err.message, ephemeral: true })
+                    .catch(() => {});
             }
-            const content = getValidationErrorMessage(err);
-            await interaction.reply({ content, ephemeral: true });
-            return;
+            throw err;
         }
 
         const guildId = interaction.guildId!;

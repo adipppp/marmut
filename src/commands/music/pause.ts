@@ -10,11 +10,11 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
-    getValidationErrorMessage,
     inVoiceChannel,
 } from "../../utils/functions";
 import { musicPlayers } from "../../core/managers";
-import { ValidationError, ValidationErrorCode } from "../../errors";
+import { ValidationErrorCode } from "../../enums";
+import { ValidationError } from "../../errors";
 
 export class PauseCommand implements Command {
     readonly cooldown: number;
@@ -55,12 +55,12 @@ export class PauseCommand implements Command {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (!(err instanceof ValidationError)) {
-                throw err;
+            if (err instanceof Error) {
+                interaction
+                    .reply({ content: err.message, ephemeral: true })
+                    .catch(() => {});
             }
-            const content = getValidationErrorMessage(err);
-            await interaction.reply({ content, ephemeral: true });
-            return;
+            throw err;
         }
 
         const player = musicPlayers.get(interaction.guildId!)!;
@@ -73,7 +73,7 @@ export class PauseCommand implements Command {
             return;
         }
 
-        if (!player.pause()) {
+        if (!(await player.pause())) {
             await interaction.reply({
                 content: "Song is already paused.",
                 ephemeral: true,

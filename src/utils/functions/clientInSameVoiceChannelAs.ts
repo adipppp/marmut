@@ -1,6 +1,6 @@
+import { GuildMember } from "discord.js";
 import { clientInVoiceChannelOf } from "./clientInVoiceChannelOf";
 import { inVoiceChannel } from "./inVoiceChannel";
-import { GuildMember } from "discord.js";
 
 export function clientInSameVoiceChannelAs(member: GuildMember) {
     const guild = member.guild;
@@ -10,9 +10,9 @@ export function clientInSameVoiceChannelAs(member: GuildMember) {
     }
 
     const clientId = member.client.user.id;
-    const cache = guild.voiceStates.cache;
-    const memberVoiceChannelId = cache.get(member.id)!.channelId!;
-    const clientVoiceChannelId = cache.get(clientId)!.channelId!;
+    const clientVoiceState = guild.voiceStates.cache.get(clientId);
+    const memberVoiceChannelId = member.voice.channelId;
+    const clientVoiceChannelId = clientVoiceState?.channelId;
 
     return memberVoiceChannelId === clientVoiceChannelId;
 }

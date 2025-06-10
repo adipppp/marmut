@@ -1,42 +1,122 @@
 import {
-    AudioPlayerStatus,
-    VoiceConnectionStatus,
-    createAudioPlayer,
-    createAudioResource,
-    getVoiceConnection,
-} from "@discordjs/voice";
-import { marmut, prisma } from "../client";
-import { Song } from "./Song";
-import {
     Colors,
     EmbedBuilder,
     SendableChannels,
     Snowflake,
     TextBasedChannel,
 } from "discord.js";
-import ytdl from "@distube/ytdl-core";
-import { RepeatMode } from "../../enums";
+import { Player } from "shoukaku";
+import { Song } from "./Song";
+import { lavalinkClient, marmut, prisma } from "../client";
+import { RepeatMode, MusicPlayerErrorCode } from "../../enums";
+import { MusicPlayerError } from "../../errors";
+import { guildVoiceStateManager } from "../managers";
+import { createNowPlayingEmbed, getVideoId } from "../../utils/functions";
 
+const ERROR_EMOJI = process.env.ERROR_EMOJI;
 const MARMUT_ICON_40PX = process.env.MARMUT_ICON_40PX;
 
 export class MusicPlayer {
     private readonly guildId: Snowflake;
     private songIdArray: bigint[];
     private currentIndex: number;
-    private volume: number;
     private repeatMode: RepeatMode;
     private textChannelId?: Snowflake;
 
-    constructor(guildId: Snowflake) {
+    constructor(guildId: Snowflake, player: Player) {
         this.guildId = guildId;
         this.songIdArray = [];
         this.currentIndex = -1;
-        this.volume = 50;
         this.repeatMode = RepeatMode.Off;
+
+        player.setGlobalVolume(50);
+
+        player.on("end", async () => {
+            try {
+                await this.handlePlayerEnd();
+            } catch (err) {
+                await this.handleError(err);
+            }
+        });
+    }
+
+    private async handleError(err: Error) {
+        console.error(err);
+        let textChannel = marmut.channels.resolve(this.textChannelId!);
+        if (textChannel === null || !textChannel.isSendable()) {
+            return;
+        }
+        const errorEmbed = this.createErrorEmbed();
+        await textChannel.send({ embeds: [errorEmbed] }).catch(() => {});
+    }
+
+    private handleGuildVoiceState() {
+        const guildVoiceState = guildVoiceStateManager.get(this.guildId);
+        if (guildVoiceState === undefined) {
+            return;
+        }
+        if (guildVoiceState.shouldTriggerAutoDisconnectTimer()) {
+            guildVoiceState.triggerAutoDisconnectTimer();
+        } else if (guildVoiceState.shouldCancelAutoDisconnectTimer()) {
+            guildVoiceState.cancelAutoDisconnectTimer();
+        }
+    }
+
+    private async handlePlayerEnd() {
+        this.currentIndex = this.getNextIndex();
+
+        if (this.songIdArray.length === 0) {
+            this.currentIndex = -1;
+            this.handleGuildVoiceState();
+            return;
+        } else if (this.currentIndex >= this.songIdArray.length) {
+            this.currentIndex = -1;
+            this.handleGuildVoiceState();
+            await this.removeAllSongs();
+            return;
+        }
+
+        const nextSongId = this.songIdArray[this.currentIndex];
+        const result = (await prisma.song.findUnique({
+            select: {
+                title: true,
+                thumbnailUrl: true,
+                videoUrl: true,
+                duration: true,
+            },
+            where: { id: nextSongId },
+        }))!;
+        const nextSong = {
+            title: result.title,
+            thumbnailUrl: result.thumbnailUrl,
+            videoUrl: result.videoUrl,
+            duration: BigInt(result.duration),
+        };
+
+        await this.playSong(nextSong);
+
+        this.handleGuildVoiceState();
+
+        const textChannel = marmut.channels.resolve(
+            this.textChannelId!
+        ) as SendableChannels;
+        const embed = createNowPlayingEmbed(nextSong);
+        await textChannel.send({ embeds: [embed] });
+    }
+
+    private createErrorEmbed() {
+        return new EmbedBuilder()
+            .setColor(Colors.Red)
+            .setTimestamp()
+            .setFooter({ text: "Marmut", iconURL: MARMUT_ICON_40PX })
+            .setDescription(
+                `${ERROR_EMOJI}  -  An error has occured on the music player!`
+            );
     }
 
     private async addSong(song: Song) {
-        const createdSong = await prisma.song.create({ data: song });
+        const newSong = { ...song, duration: song.duration.toString() };
+        const createdSong = await prisma.song.create({ data: newSong });
         this.songIdArray.push(createdSong.id);
         return createdSong;
     }
@@ -46,21 +126,8 @@ export class MusicPlayer {
         const deletedSongs = await prisma.song.deleteMany({
             where: { id: { in: songIds } },
         });
-
         this.songIdArray = [];
-
         return deletedSongs;
-    }
-
-    private createEmbed(song: Song) {
-        return new EmbedBuilder()
-            .setColor(Colors.Red)
-            .setTimestamp()
-            .setThumbnail(song.thumbnailUrl)
-            .setFooter({ text: "Marmut", iconURL: MARMUT_ICON_40PX })
-            .setDescription(
-                `:arrow_forward:  -  Now Playing\n[${song.title}](${song.videoUrl})`
-            );
     }
 
     private getNextIndex() {
@@ -79,102 +146,20 @@ export class MusicPlayer {
         return nextIndex;
     }
 
-    private async handleIdleState() {
-        this.currentIndex = this.getNextIndex();
-
-        if (this.songIdArray.length === 0) {
-            this.currentIndex = -1;
-        } else if (this.currentIndex >= this.songIdArray.length) {
-            await this.removeAllSongs();
-            this.currentIndex = -1;
-        } else {
-            const nextSongId = this.songIdArray[this.currentIndex];
-            const nextSong = (await prisma.song.findUnique({
-                select: {
-                    title: true,
-                    thumbnailUrl: true,
-                    videoUrl: true,
-                    duration: true,
-                },
-                where: { id: nextSongId },
-            }))!;
-
-            const channel = marmut.channels.cache.get(
-                this.textChannelId!
-            ) as SendableChannels;
-
-            await this.playSong(nextSong);
-
-            const embed = this.createEmbed(nextSong);
-            await channel.send({ embeds: [embed] });
-        }
-    }
-
     private async playSong(song: Song) {
-        const audioPlayer = this.getAudioPlayer();
-        if (!audioPlayer) {
-            throw new Error("Voice connection has not been established.");
-        }
-
-        const stream = this.getAudioStream(song.videoUrl);
-        const resource = createAudioResource(stream, {
-            inlineVolume: true,
-        });
-        resource.volume!.setVolume(this.volume / 100);
-
-        audioPlayer.play(resource);
-    }
-
-    private getAudioStream(url: string) {
-        const dlChunkSize = process.env.DL_CHUNK_SIZE
-            ? 1024 * 1024 * parseInt(process.env.DL_CHUNK_SIZE)
-            : undefined;
-
-        const stream = ytdl(url, {
-            dlChunkSize,
-            filter: "audioonly",
-            quality: "highestaudio",
-        });
-
-        stream.once("error", (err) => {
-            console.error(err);
-            stream.destroy();
-        });
-
-        return stream;
-    }
-
-    private getAudioPlayer() {
-        const connection = getVoiceConnection(this.guildId);
-        if (
-            !connection ||
-            connection.state.status === VoiceConnectionStatus.Destroyed
-        ) {
-            return null;
-        }
-
-        let audioPlayer;
-        let subscription = connection.state.subscription;
-
-        if (subscription) {
-            audioPlayer = subscription.player;
-        } else {
-            audioPlayer = createAudioPlayer();
-
-            audioPlayer.on("error", (err) => {
-                console.error(err);
-                this.currentIndex = this.songIdArray.length;
+        const player = lavalinkClient.players.get(this.guildId);
+        if (player === undefined) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
             });
-
-            audioPlayer.on(
-                AudioPlayerStatus.Idle,
-                async () => await this.handleIdleState()
-            );
-
-            connection.subscribe(audioPlayer);
         }
-
-        return audioPlayer;
+        const videoId = getVideoId(song.videoUrl);
+        if (videoId === null) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.INVALID_VIDEO_URL,
+            });
+        }
+        await player.playTrack({ track: { identifier: videoId } });
     }
 
     isPlaying() {
@@ -183,49 +168,75 @@ export class MusicPlayer {
 
     async play(song: Song, channel: TextBasedChannel) {
         await this.addSong(song);
+        this.textChannelId = channel.id;
+
         if (this.currentIndex === -1) {
+            try {
+                await this.playSong(song);
+            } catch (err) {
+                console.error(err);
+                this.handleError(err).catch(() => {});
+                this.removeSong(this.currentIndex).catch(() => {});
+                throw err;
+            }
+
             this.currentIndex = 0;
-            this.textChannelId = channel.id;
-            await this.playSong(song);
+            this.handleGuildVoiceState();
         }
     }
 
-    async stop(force?: boolean) {
+    async stop() {
+        const player = lavalinkClient.players.get(this.guildId);
+        if (player === undefined) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
+            });
+        }
         if (this.songIdArray.length > 0) {
             await this.removeAllSongs();
         }
-        const audioPlayer = this.getAudioPlayer();
-        const stream = this.getAudioResource()?.playStream;
-        const retval = audioPlayer !== null && audioPlayer.stop(force);
-        stream?.destroy();
-        return retval;
+        await player.stopTrack();
     }
 
-    skip() {
-        const audioPlayer = this.getAudioPlayer();
-        if (!audioPlayer) {
-            throw new Error("Voice connection has not been established.");
+    async skip() {
+        const player = lavalinkClient.players.get(this.guildId);
+        if (player === undefined) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
+            });
         }
-
-        audioPlayer.unpause();
-
-        return audioPlayer.stop();
+        if (player.paused) {
+            await player.setPaused(false);
+        }
+        await player.stopTrack();
     }
 
-    pause(interpolateSilence?: boolean) {
-        const audioPlayer = this.getAudioPlayer();
-        if (!audioPlayer) {
-            throw new Error("Voice connection has not been established.");
+    async pause() {
+        const player = lavalinkClient.players.get(this.guildId);
+        if (player === undefined) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
+            });
         }
-        return audioPlayer.pause(interpolateSilence);
+        if (player.paused) {
+            return false;
+        }
+        await player.setPaused(true);
+        return true;
     }
 
-    unpause() {
-        const audioPlayer = this.getAudioPlayer();
-        if (!audioPlayer) {
-            throw new Error("Voice connection has not been established.");
+    async unpause() {
+        const player = lavalinkClient.players.get(this.guildId);
+        if (player === undefined) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
+            });
         }
-        return audioPlayer.unpause();
+        if (!player.paused) {
+            return false;
+        }
+        await player.setPaused(false);
+        return true;
     }
 
     async removeSong(index: number) {
@@ -237,7 +248,7 @@ export class MusicPlayer {
         if (this.currentIndex > index) {
             this.currentIndex--;
         } else if (this.currentIndex === index) {
-            this.skip();
+            await this.skip();
             this.currentIndex--;
         }
 
@@ -246,23 +257,53 @@ export class MusicPlayer {
         return deletedSong;
     }
 
-    getVolume() {
-        return this.volume;
-    }
-
-    setVolume(volume: number) {
-        this.volume = Math.trunc(volume);
-
-        const audioPlayer = this.getAudioPlayer();
-        if (
-            !audioPlayer ||
-            audioPlayer.state.status === AudioPlayerStatus.Idle
-        ) {
-            return;
+    async seek(position: number) {
+        if (position < 0) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.SEEK_POSITION_OUT_OF_RANGE,
+            });
         }
 
-        const resource = audioPlayer.state.resource;
-        resource.volume!.setVolume(volume / 100);
+        const trackDuration = this.getCurrentSongPlayback();
+        if (position > trackDuration) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.SEEK_POSITION_OUT_OF_RANGE,
+            });
+        }
+
+        const player = lavalinkClient.players.get(this.guildId);
+        if (player === undefined) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
+            });
+        }
+
+        await player.seekTo(position * 1000);
+    }
+
+    getVolume() {
+        const player = lavalinkClient.players.get(this.guildId);
+        if (player === undefined) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
+            });
+        }
+        return player.volume;
+    }
+
+    async setVolume(volume: number) {
+        if (volume < 0 || volume > 100) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.VOLUME_OUT_OF_RANGE,
+            });
+        }
+        const player = lavalinkClient.players.get(this.guildId);
+        if (player === undefined) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
+            });
+        }
+        await player.setGlobalVolume(volume);
     }
 
     getRepeatMode() {
@@ -279,19 +320,24 @@ export class MusicPlayer {
 
     async getCurrentSong() {
         const songId = this.songIdArray[this.currentIndex];
-        return await prisma.song.findUnique({ where: { id: songId } });
+        const result = await prisma.song.findUnique({ where: { id: songId } });
+        if (result === null) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.SONG_NOT_FOUND,
+            });
+        }
+        const currentSong = { ...result, duration: BigInt(result.duration) };
+        return currentSong;
     }
 
-    getAudioResource() {
-        const audioPlayer = this.getAudioPlayer();
-        if (
-            audioPlayer &&
-            audioPlayer.state.status !== AudioPlayerStatus.Idle
-        ) {
-            return audioPlayer.state.resource;
-        } else {
-            return null;
+    getCurrentSongPlayback() {
+        const player = lavalinkClient.players.get(this.guildId);
+        if (player === undefined) {
+            throw new MusicPlayerError({
+                code: MusicPlayerErrorCode.PLAYER_NOT_FOUND,
+            });
         }
+        return player.position;
     }
 
     async getQueue() {
@@ -303,6 +349,7 @@ export class MusicPlayer {
                 duration: true,
             },
             where: { id: { in: this.songIdArray } },
+            orderBy: { id: "asc" },
         });
     }
 }

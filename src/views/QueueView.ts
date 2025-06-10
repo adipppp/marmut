@@ -110,8 +110,7 @@ export class QueueView {
         const currentSongIndex = this.player.getCurrentIndex();
         const currentSong = queue[currentSongIndex];
 
-        const currentSongPlayback =
-            this.player.getAudioResource()!.playbackDuration;
+        const currentSongPlayback = this.player.getCurrentSongPlayback();
         const formattedDuration =
             this.millisecondsToHHMMSS(currentSongPlayback);
 

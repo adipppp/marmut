@@ -10,12 +10,12 @@ import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientInVoiceChannelOf,
-    getValidationErrorMessage,
     inVoiceChannel,
 } from "../../utils/functions";
 import { QueueView } from "../../views";
 import { musicPlayers } from "../../core/managers";
-import { ValidationError, ValidationErrorCode } from "../../errors";
+import { ValidationErrorCode } from "../../enums";
+import { ValidationError } from "../../errors";
 
 export class QueueCommand implements Command {
     readonly cooldown: number;
@@ -30,7 +30,7 @@ export class QueueCommand implements Command {
     }
 
     private validatePreconditions(
-        interaction: ButtonInteraction | ChatInputCommandInteraction
+        interaction: ButtonInteraction | ChatInputCommandInteraction,
     ) {
         const guild = interaction.guild!;
         const member = interaction.member as GuildMember;
@@ -56,7 +56,7 @@ export class QueueCommand implements Command {
 
     private validateUser(
         interaction: ButtonInteraction,
-        originalUserId: Snowflake
+        originalUserId: Snowflake,
     ) {
         if (interaction.user.id !== originalUserId) {
             throw new ValidationError({
@@ -67,7 +67,7 @@ export class QueueCommand implements Command {
 
     private async handleValidInteraction(
         interaction: ButtonInteraction,
-        view: QueueView
+        view: QueueView,
     ) {
         if (interaction.customId === "previous-page")
             await view.setCurrentPage(view.getCurrentPage() - 1);
@@ -90,12 +90,12 @@ export class QueueCommand implements Command {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (!(err instanceof ValidationError)) {
-                throw err;
+            if (err instanceof Error) {
+                interaction
+                    .reply({ content: err.message, ephemeral: true })
+                    .catch(() => {});
             }
-            const content = getValidationErrorMessage(err);
-            await interaction.reply({ content, ephemeral: true });
-            return;
+            throw err;
         }
 
         const guildId = interaction.guildId!;
@@ -134,11 +134,13 @@ export class QueueCommand implements Command {
                 this.validatePreconditions(interaction);
                 await this.handleValidInteraction(interaction, view);
             } catch (err) {
-                if (!(err instanceof ValidationError)) {
-                    throw err;
+                console.log(err);
+                if (err instanceof Error) {
+                    return;
                 }
-                const content = getValidationErrorMessage(err);
-                await interaction.reply({ content, ephemeral: true });
+                await interaction
+                    .reply({ content: err.message, ephemeral: true })
+                    .catch(() => {});
             }
         });
     }
