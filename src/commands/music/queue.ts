@@ -2,6 +2,7 @@ import {
     ButtonInteraction,
     ChatInputCommandInteraction,
     GuildMember,
+    InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
     Snowflake,
@@ -26,7 +27,7 @@ export class QueueCommand implements Command {
         this.data = new SlashCommandBuilder()
             .setName("queue")
             .setDescription("Displays the current song queue.")
-            .setDMPermission(false);
+            .setContexts(InteractionContextType.Guild);
     }
 
     private validatePreconditions(

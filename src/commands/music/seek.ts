@@ -2,6 +2,7 @@ import {
     ChatInputCommandInteraction,
     Colors,
     EmbedBuilder,
+    InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
@@ -19,12 +20,12 @@ export class SeekCommmand implements Command {
         this.data = new SlashCommandBuilder()
             .setName("seek")
             .setDescription("Seeks to a specific position in the current song.")
-            .setDMPermission(false)
+            .setContexts(InteractionContextType.Guild)
             .addIntegerOption((builder) =>
                 builder
                     .setName("position")
                     .setDescription("Position to seek to in seconds.")
-                    .setRequired(true)
+                    .setRequired(true),
             );
     }
 
@@ -90,7 +91,7 @@ export class SeekCommmand implements Command {
         const embed = new EmbedBuilder()
             .setColor(Colors.Red)
             .setDescription(
-                `:fast_forward:  -  Seeked to ${formattedPosition}`
+                `:fast_forward:  -  Seeked to ${formattedPosition}`,
             );
 
         await interaction.reply({ embeds: [embed] });

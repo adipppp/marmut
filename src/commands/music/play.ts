@@ -1,6 +1,7 @@
 import {
     ChatInputCommandInteraction,
     GuildMember,
+    InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
@@ -29,14 +30,14 @@ export class PlayCommand implements Command {
         this.data = new SlashCommandBuilder()
             .setName("play")
             .setDescription("Plays a song.")
-            .setDMPermission(false)
+            .setContexts(InteractionContextType.Guild)
             .addStringOption((builder) =>
                 builder
                     .setName("song")
                     .setDescription(
-                        "The song to play. Can also be a YouTube video URL."
+                        "The song to play. Can also be a YouTube video URL.",
                     )
-                    .setRequired(true)
+                    .setRequired(true),
             );
     }
 

@@ -1,5 +1,6 @@
 import {
     ChatInputCommandInteraction,
+    InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
@@ -15,14 +16,14 @@ export class HelpCommand implements Command {
         this.data = new SlashCommandBuilder()
             .setName("help")
             .setDescription("Displays the list of available commands.")
-            .setDMPermission(false)
+            .setContexts(InteractionContextType.Guild)
             .addStringOption((builder) =>
                 builder
                     .setName("command")
                     .setDescription(
-                        "The command whose help page will be fetched."
+                        "The command whose help page will be fetched.",
                     )
-                    .setRequired(false)
+                    .setRequired(false),
             );
     }
 

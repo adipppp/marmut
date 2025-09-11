@@ -3,6 +3,7 @@ import {
     Colors,
     EmbedBuilder,
     GuildMember,
+    InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
@@ -27,7 +28,7 @@ export class LeaveCommand implements Command {
         this.data = new SlashCommandBuilder()
             .setName("leave")
             .setDescription("Disconnects from the voice channel.")
-            .setDMPermission(false);
+            .setContexts(InteractionContextType.Guild);
     }
 
     private validatePreconditions(interaction: ChatInputCommandInteraction) {

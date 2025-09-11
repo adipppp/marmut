@@ -1,6 +1,7 @@
 import {
     ChatInputCommandInteraction,
     GuildMember,
+    InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
@@ -24,7 +25,7 @@ export class ResumeCommand implements Command {
         this.data = new SlashCommandBuilder()
             .setName("resume")
             .setDescription("Resumes the current song.")
-            .setDMPermission(false);
+            .setContexts(InteractionContextType.Guild);
     }
 
     private validatePreconditions(interaction: ChatInputCommandInteraction) {

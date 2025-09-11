@@ -2,6 +2,7 @@ import {
     ButtonInteraction,
     ChatInputCommandInteraction,
     GuildMember,
+    InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
     Snowflake,
@@ -32,17 +33,17 @@ export class SearchCommand implements Command {
         this.data = new SlashCommandBuilder()
             .setName("search")
             .setDescription("Searches for songs to play.")
-            .setDMPermission(false)
+            .setContexts(InteractionContextType.Guild)
             .addStringOption((builder) =>
                 builder
                     .setName("query")
                     .setDescription("Something to search.")
-                    .setRequired(true)
+                    .setRequired(true),
             );
     }
 
     private validatePreconditions(
-        interaction: ButtonInteraction | ChatInputCommandInteraction
+        interaction: ButtonInteraction | ChatInputCommandInteraction,
     ) {
         const guild = interaction.guild!;
         const member = interaction.member as GuildMember;
@@ -73,7 +74,7 @@ export class SearchCommand implements Command {
 
     private validateUser(
         interaction: ButtonInteraction,
-        originalUserId: Snowflake
+        originalUserId: Snowflake,
     ) {
         if (interaction.user.id !== originalUserId) {
             throw new ValidationError({
@@ -110,7 +111,7 @@ export class SearchCommand implements Command {
                     thumbnailUrl: result.info.artworkUrl ?? "",
                     videoUrl: result.info.uri ?? "",
                     duration: BigInt(result.info.length),
-                })
+                }),
         );
     }
 
@@ -124,7 +125,7 @@ export class SearchCommand implements Command {
 
     private async handleValidInteraction(
         interaction: ButtonInteraction,
-        songs: Song[]
+        songs: Song[],
     ) {
         await interaction.deferReply();
 
@@ -209,7 +210,9 @@ export class SearchCommand implements Command {
                 collector.stop();
 
                 rows.forEach((row) =>
-                    row.components.forEach((button) => button.setDisabled(true))
+                    row.components.forEach((button) =>
+                        button.setDisabled(true),
+                    ),
                 );
 
                 interaction.message.edit({ components: rows });

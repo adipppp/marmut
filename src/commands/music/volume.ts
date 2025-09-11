@@ -3,6 +3,7 @@ import {
     Colors,
     EmbedBuilder,
     GuildMember,
+    InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
@@ -25,7 +26,7 @@ export class VolumeCommand implements Command {
         this.data = new SlashCommandBuilder()
             .setName("volume")
             .setDescription("Changes the volume of the music player.")
-            .setDMPermission(false)
+            .setContexts(InteractionContextType.Guild)
             .addIntegerOption((builder) =>
                 builder
                     .setName("volume")

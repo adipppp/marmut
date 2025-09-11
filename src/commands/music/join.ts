@@ -3,6 +3,7 @@ import {
     Colors,
     EmbedBuilder,
     GuildMember,
+    InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
     VoiceBasedChannel,
@@ -28,7 +29,7 @@ export class JoinCommand implements Command {
         this.data = new SlashCommandBuilder()
             .setName("join")
             .setDescription("Connects to a voice channel.")
-            .setDMPermission(false)
+            .setContexts(InteractionContextType.Guild)
             .addChannelOption((builder) =>
                 builder
                     .setName("channel")

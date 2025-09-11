@@ -3,6 +3,7 @@ import {
     Colors,
     EmbedBuilder,
     GuildMember,
+    InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
@@ -25,7 +26,7 @@ export class StopCommand implements Command {
         this.data = new SlashCommandBuilder()
             .setName("stop")
             .setDescription("Stops the music player.")
-            .setDMPermission(false);
+            .setContexts(InteractionContextType.Guild);
     }
 
     private validatePreconditions(interaction: ChatInputCommandInteraction) {

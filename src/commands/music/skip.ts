@@ -3,6 +3,7 @@ import {
     Colors,
     EmbedBuilder,
     GuildMember,
+    InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
@@ -25,7 +26,7 @@ export class SkipCommand implements Command {
         this.data = new SlashCommandBuilder()
             .setName("skip")
             .setDescription("Skips the current song.")
-            .setDMPermission(false);
+            .setContexts(InteractionContextType.Guild);
     }
 
     private validatePreconditions(interaction: ChatInputCommandInteraction) {

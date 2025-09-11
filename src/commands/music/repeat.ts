@@ -3,6 +3,7 @@ import {
     Colors,
     EmbedBuilder,
     GuildMember,
+    InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
@@ -26,7 +27,7 @@ export class RepeatCommand implements Command {
         this.data = new SlashCommandBuilder()
             .setName("repeat")
             .setDescription("Sets the repeat mode of the music player.")
-            .setDMPermission(false)
+            .setContexts(InteractionContextType.Guild)
             .addStringOption((builder) =>
                 builder
                     .setName("mode")

@@ -3,6 +3,7 @@ import {
     Colors,
     EmbedBuilder,
     GuildMember,
+    InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
@@ -25,7 +26,7 @@ export class RemoveCommand implements Command {
         this.data = new SlashCommandBuilder()
             .setName("remove")
             .setDescription("Removes a song from the queue.")
-            .setDMPermission(false)
+            .setContexts(InteractionContextType.Guild)
             .addIntegerOption((builder) =>
                 builder
                     .setName("position")
