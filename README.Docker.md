@@ -1,22 +1,22 @@
 ### Building and running your application
 
-When you're ready, start your application by running:
-`docker compose up --build`.
+When you are ready, start your application by running:
 
-<!-- Your application will be available at http://localhost:8000. -->
+`docker compose up --build`
+
+This project now runs without a local database container.
 
 ### Deploying your application to the cloud
 
-First, build your image, e.g.: `docker build -t myapp .`.
-If your cloud uses a different CPU architecture than your development
-machine (e.g., you are on a Mac M1 and your cloud provider is amd64),
-you'll want to build the image for that platform, e.g.:
-`docker build --platform=linux/amd64 -t myapp .`.
+Build your image:
 
-Then, push it to your registry, e.g. `docker push myregistry.com/myapp`.
+`docker build -t myapp .`
 
-Consult Docker's [getting started](https://docs.docker.com/go/get-started-sharing/)
-docs for more detail on building and pushing.
+If your cloud uses a different CPU architecture than your development machine,
+build for that platform:
 
-### References
-* [Docker's Node.js guide](https://docs.docker.com/language/nodejs/)
+`docker build --platform=linux/amd64 -t myapp .`
+
+Then push it to your registry:
+
+`docker push myregistry.com/myapp`

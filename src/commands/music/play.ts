@@ -1,16 +1,15 @@
 import {
     ChatInputCommandInteraction,
-    GuildMember,
     InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
 import { LoadType, Track } from "shoukaku";
+import { BaseCommand } from "../BaseCommand";
+import { COOLDOWNS } from "../../config";
 import { Song } from "../../core/music";
-import { musicPlayers } from "../../core/managers";
 import { LavalinkErrorCode, ValidationErrorCode } from "../../enums";
 import { LavalinkError, ValidationError } from "../../errors";
-import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientIsPlayingIn,
@@ -20,13 +19,14 @@ import {
     inVoiceChannel,
     joinVoiceChannel,
 } from "../../utils/functions";
+import { getGuildMusicPlayer, getMusicCommandContext } from "./context";
 
-export class PlayCommand implements Command {
-    readonly cooldown: number;
+export class PlayCommand extends BaseCommand {
+    readonly cooldown = COOLDOWNS.DEFAULT;
     readonly data: SharedSlashCommand;
 
     constructor() {
-        this.cooldown = 3;
+        super();
         this.data = new SlashCommandBuilder()
             .setName("play")
             .setDescription("Plays a song.")
@@ -41,9 +41,10 @@ export class PlayCommand implements Command {
             );
     }
 
-    private validatePreconditions(interaction: ChatInputCommandInteraction) {
-        const guild = interaction.guild!;
-        const member = interaction.member as GuildMember;
+    private validatePreconditions(
+        interaction: ChatInputCommandInteraction,
+    ): void {
+        const { guild, member } = getMusicCommandContext(interaction);
 
         if (!inVoiceChannel(member)) {
             throw new ValidationError({
@@ -69,7 +70,7 @@ export class PlayCommand implements Command {
         }
     }
 
-    private async getTrack(query: string) {
+    private async getTrack(query: string): Promise<Track> {
         const response = await getSearchResults(query);
         if (
             response === undefined ||
@@ -89,7 +90,7 @@ export class PlayCommand implements Command {
         }
     }
 
-    private createSong(track: Track) {
+    private createSong(track: Track): Song {
         const info = track.info;
         return new Song({
             title: info.title,
@@ -99,23 +100,11 @@ export class PlayCommand implements Command {
         });
     }
 
-    private createEmbed(song: Song, currentIndex: number) {
-        if (currentIndex === -1) {
-            return createNowPlayingEmbed(song);
-        } else {
-            return createAddedToQueueEmbed(song);
-        }
-    }
-
-    async run(interaction: ChatInputCommandInteraction) {
+    async run(interaction: ChatInputCommandInteraction): Promise<void> {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (err instanceof Error) {
-                interaction
-                    .reply({ content: err.message, ephemeral: true })
-                    .catch(() => {});
-            }
+            await this.handleError(interaction, err);
             throw err;
         }
 
@@ -123,38 +112,39 @@ export class PlayCommand implements Command {
 
         const query = interaction.options.getString("song", true);
 
-        let trackResult;
+        let trackResult: Track;
         try {
             trackResult = await this.getTrack(query);
         } catch (err) {
             if (err instanceof Error) {
-                interaction.editReply(err.message).catch(() => {});
+                await interaction.editReply(err.message).catch(this.logError);
             }
             throw err;
         }
 
-        const member = interaction.member as GuildMember;
-        const guild = interaction.guild!;
+        const { guild, member } = getMusicCommandContext(interaction);
 
         if (!clientInSameVoiceChannelAs(member) && !clientIsPlayingIn(guild)) {
             await joinVoiceChannel(member.voice.channel!);
         }
 
-        const guildId = guild.id;
-        const player = musicPlayers.get(guildId)!;
+        const player = getGuildMusicPlayer(guild.id);
         const song = this.createSong(trackResult);
         const currentIndex = player.getCurrentIndex();
 
         try {
             await player.play(song, interaction.channel!);
         } catch (err) {
-            interaction
+            await interaction
                 .editReply("Bot is not connected to any voice channel.")
-                .catch(() => {});
+                .catch(this.logError);
             throw err;
         }
 
-        const embed = this.createEmbed(song, currentIndex);
+        const embed =
+            currentIndex === -1
+                ? createNowPlayingEmbed(song)
+                : createAddedToQueueEmbed(song);
         await interaction.editReply({ embeds: [embed] });
     }
 }

@@ -1,29 +1,29 @@
 import {
     ChatInputCommandInteraction,
-    Colors,
-    EmbedBuilder,
-    GuildMember,
     InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
+import { BaseCommand } from "../BaseCommand";
+import { COOLDOWNS } from "../../config";
 import { RepeatMode } from "../../enums";
-import { Command } from "../../types";
 import {
-    clientInSameVoiceChannelAs,
-    clientInVoiceChannelOf,
-    inVoiceChannel,
-} from "../../utils/functions";
-import { musicPlayers } from "../../core/managers";
-import { ValidationErrorCode } from "../../enums";
-import { ValidationError } from "../../errors";
+    validateMemberInVoice,
+    validateClientInVoice,
+    validateSameVoiceChannel,
+} from "../../utils/validators";
+import {
+    assertPlayerIsPlaying,
+    getGuildMusicPlayer,
+    getMusicCommandContext,
+} from "./context";
 
-export class RepeatCommand implements Command {
-    readonly cooldown: number;
+export class RepeatCommand extends BaseCommand {
+    readonly cooldown = COOLDOWNS.FAST;
     readonly data: SharedSlashCommand;
 
     constructor() {
-        this.cooldown = 1;
+        super();
         this.data = new SlashCommandBuilder()
             .setName("repeat")
             .setDescription("Sets the repeat mode of the music player.")
@@ -41,95 +41,62 @@ export class RepeatCommand implements Command {
             );
     }
 
-    private validatePreconditions(interaction: ChatInputCommandInteraction) {
-        const guild = interaction.guild!;
-        const member = interaction.member as GuildMember;
-
-        if (!inVoiceChannel(member)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.MEMBER_NOT_IN_VOICE,
-            });
-        }
-
-        if (!clientInVoiceChannelOf(guild)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.CLIENT_NOT_IN_VOICE,
-            });
-        }
-
-        if (!clientInSameVoiceChannelAs(member)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.MEMBER_NOT_IN_SAME_VOICE,
-            });
-        }
+    private getModeDescription(mode: RepeatMode, isInfo: boolean): string {
+        const descriptions: Record<
+            RepeatMode,
+            { info: string; switch: string }
+        > = {
+            [RepeatMode.Off]: {
+                info: ":repeat:  -  Current repeat mode: Off",
+                switch: ":x:  -  Repeat disabled",
+            },
+            [RepeatMode.Song]: {
+                info: ":repeat_one:  -  Current repeat mode: Song",
+                switch: ":repeat_one:  -  Song repeat enabled",
+            },
+            [RepeatMode.Queue]: {
+                info: ":repeat:  -  Current repeat mode: Queue",
+                switch: ":repeat:  -  Queue repeat enabled",
+            },
+        };
+        return isInfo ? descriptions[mode].info : descriptions[mode].switch;
     }
 
-    private createModeInfoEmbed(mode: RepeatMode) {
-        let desc;
-        if (mode === RepeatMode.Off) {
-            desc = ":repeat:  -  Current repeat mode: Off";
-        } else if (mode === RepeatMode.Song) {
-            desc = ":repeat_one:  -  Current repeat mode: Song";
-        } else if (mode === RepeatMode.Queue) {
-            desc = ":repeat:  -  Current repeat mode: Queue";
-        }
-
-        const embed = new EmbedBuilder()
-            .setColor(Colors.Red)
-            .setDescription(desc!);
-
-        return embed;
+    private getSameModeMessage(mode: RepeatMode): string {
+        const messages: Record<RepeatMode, string> = {
+            [RepeatMode.Off]: "Repeat feature is already disabled.",
+            [RepeatMode.Song]: 'Repeat mode is already set to "Song".',
+            [RepeatMode.Queue]: 'Repeat mode is already set to "Queue".',
+        };
+        return messages[mode];
     }
 
-    private createModeSwitchEmbed(mode: RepeatMode) {
-        let desc;
-        if (mode === RepeatMode.Off) {
-            desc = ":x:  -  Repeat disabled";
-        } else if (mode === RepeatMode.Song) {
-            desc = ":repeat_one:  -  Song repeat enabled";
-        } else if (mode === RepeatMode.Queue) {
-            desc = ":repeat:  -  Queue repeat enabled";
-        }
-
-        const embed = new EmbedBuilder()
-            .setColor(Colors.Red)
-            .setDescription(desc!);
-
-        return embed;
-    }
-
-    private createSameModeMessage(mode: RepeatMode) {
-        let message;
-        if (mode === RepeatMode.Off) {
-            message = "Repeat feature is already disabled.";
-        } else if (mode === RepeatMode.Song) {
-            message = 'Repeat mode is already set to "Song".';
-        } else if (mode === RepeatMode.Queue) {
-            message = 'Repeat mode is already set to "Queue".';
-        }
-
-        return message;
-    }
-
-    async run(interaction: ChatInputCommandInteraction) {
+    async run(interaction: ChatInputCommandInteraction): Promise<void> {
         try {
-            this.validatePreconditions(interaction);
+            const { guild, member } = getMusicCommandContext(interaction);
+            validateMemberInVoice(member);
+            validateClientInVoice(guild);
+            validateSameVoiceChannel(member);
         } catch (err) {
-            if (err instanceof Error) {
-                interaction
-                    .reply({ content: err.message, ephemeral: true })
-                    .catch(() => {});
-            }
+            await this.handleError(interaction, err);
             throw err;
         }
 
         const inputMode = interaction.options.getString("mode");
-        const guildId = interaction.guildId!;
-        const player = musicPlayers.get(guildId)!;
+        const { guild } = getMusicCommandContext(interaction);
+        const player = getGuildMusicPlayer(guild.id);
+        try {
+            assertPlayerIsPlaying(player);
+        } catch (err) {
+            await this.handleError(interaction, err);
+            return;
+        }
         const currentMode = player.getRepeatMode();
 
         if (inputMode === null) {
-            const embed = this.createModeInfoEmbed(currentMode);
+            const embed = this.createEmbed(
+                this.getModeDescription(currentMode, true),
+            );
             await interaction.reply({ embeds: [embed] });
             return;
         }
@@ -137,14 +104,16 @@ export class RepeatCommand implements Command {
         const newMode = inputMode as RepeatMode;
 
         if (currentMode === newMode) {
-            const content = this.createSameModeMessage(newMode);
-            await interaction.reply({ content, ephemeral: true });
+            await this.replyWithError(
+                interaction,
+                this.getSameModeMessage(newMode),
+            );
             return;
         }
 
         player.setRepeatMode(newMode);
 
-        const embed = this.createModeSwitchEmbed(newMode);
+        const embed = this.createEmbed(this.getModeDescription(newMode, false));
         await interaction.reply({ embeds: [embed] });
     }
 }

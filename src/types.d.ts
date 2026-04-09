@@ -1,19 +1,9 @@
-import {
-    ChatInputCommandInteraction,
-    Events,
-    SharedSlashCommand,
-} from "discord.js";
+import { ChatInputCommandInteraction, SharedSlashCommand } from "discord.js";
 
 export interface Command {
     cooldown: number;
     data: SharedSlashCommand;
     run(interaction: ChatInputCommandInteraction): void | Promise<void>;
-}
-
-export interface EventHandler {
-    eventName: Events;
-    once?: boolean;
-    handle(...args: any[]): void | Promise<void>;
 }
 
 export interface ClientEventListener {

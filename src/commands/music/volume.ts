@@ -1,28 +1,30 @@
 import {
     ChatInputCommandInteraction,
-    Colors,
-    EmbedBuilder,
-    GuildMember,
     InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
-import { Command } from "../../types";
+import { BaseCommand } from "../BaseCommand";
+import { COOLDOWNS, MUSIC_PLAYER } from "../../config";
 import {
-    clientInSameVoiceChannelAs,
-    clientInVoiceChannelOf,
-    inVoiceChannel,
-} from "../../utils/functions";
-import { musicPlayers } from "../../core/managers";
-import { ValidationErrorCode } from "../../enums";
-import { ValidationError } from "../../errors";
+    validateMemberInVoice,
+    validateClientInVoice,
+    validateSameVoiceChannel,
+} from "../../utils/validators";
+import {
+    assertPlayerIsPlaying,
+    getGuildMusicPlayer,
+    getMusicCommandContext,
+} from "./context";
 
-export class VolumeCommand implements Command {
-    readonly cooldown: number;
+const { MIN_VOLUME, MAX_VOLUME } = MUSIC_PLAYER;
+
+export class VolumeCommand extends BaseCommand {
+    readonly cooldown = COOLDOWNS.FAST;
     readonly data: SharedSlashCommand;
 
     constructor() {
-        this.cooldown = 1;
+        super();
         this.data = new SlashCommandBuilder()
             .setName("volume")
             .setDescription("Changes the volume of the music player.")
@@ -35,72 +37,51 @@ export class VolumeCommand implements Command {
             );
     }
 
-    private validatePreconditions(interaction: ChatInputCommandInteraction) {
-        const guild = interaction.guild!;
-        const member = interaction.member as GuildMember;
-
-        if (!inVoiceChannel(member)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.MEMBER_NOT_IN_VOICE,
-            });
-        }
-
-        if (!clientInVoiceChannelOf(guild)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.CLIENT_NOT_IN_VOICE,
-            });
-        }
-
-        if (!clientInSameVoiceChannelAs(member)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.MEMBER_NOT_IN_SAME_VOICE,
-            });
-        }
-    }
-
-    async run(interaction: ChatInputCommandInteraction) {
+    async run(interaction: ChatInputCommandInteraction): Promise<void> {
         try {
-            this.validatePreconditions(interaction);
+            const { guild, member } = getMusicCommandContext(interaction);
+            validateMemberInVoice(member);
+            validateClientInVoice(guild);
+            validateSameVoiceChannel(member);
         } catch (err) {
-            if (err instanceof Error) {
-                interaction
-                    .reply({ content: err.message, ephemeral: true })
-                    .catch(() => {});
-            }
+            await this.handleError(interaction, err);
             throw err;
         }
 
-        const guild = interaction.guild!;
-        const guildId = guild.id;
-        const player = musicPlayers.get(guildId)!;
+        const { guild } = getMusicCommandContext(interaction);
+        const player = getGuildMusicPlayer(guild.id);
+
+        try {
+            assertPlayerIsPlaying(player);
+        } catch (err) {
+            await this.handleError(interaction, err);
+            return;
+        }
 
         const currentVolume = player.getVolume();
         const newVolume = interaction.options.getInteger("volume");
 
         if (newVolume === null) {
-            const embed = new EmbedBuilder()
-                .setColor(Colors.Red)
-                .setDescription(
-                    `:loud_sound:  -  Current volume: ${currentVolume}%`,
-                );
+            const embed = this.createEmbed(
+                `:loud_sound:  -  Current volume: ${currentVolume}%`,
+            );
             await interaction.reply({ embeds: [embed] });
             return;
         }
 
-        if (newVolume < 0 || newVolume > 100) {
-            await interaction.reply({
-                content: "Volume must be between 0 and 100.",
-                ephemeral: true,
-            });
+        if (newVolume < MIN_VOLUME || newVolume > MAX_VOLUME) {
+            await this.replyWithError(
+                interaction,
+                `Volume must be between ${MIN_VOLUME} and ${MAX_VOLUME}.`,
+            );
             return;
         }
 
         await player.setVolume(newVolume);
 
-        const embed = new EmbedBuilder()
-            .setColor(Colors.Red)
-            .setDescription(`:loud_sound:  -  Volume set to ${newVolume}%`);
-
+        const embed = this.createEmbed(
+            `:loud_sound:  -  Volume set to ${newVolume}%`,
+        );
         await interaction.reply({ embeds: [embed] });
     }
 }

@@ -1,91 +1,61 @@
 import {
     ChatInputCommandInteraction,
-    Colors,
-    EmbedBuilder,
-    GuildMember,
     InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
-import { Command } from "../../types";
+import { BaseCommand } from "../BaseCommand";
+import { COOLDOWNS } from "../../config";
 import {
-    clientInSameVoiceChannelAs,
-    clientInVoiceChannelOf,
-    inVoiceChannel,
-} from "../../utils/functions";
-import { musicPlayers } from "../../core/managers";
-import { ValidationErrorCode } from "../../enums";
-import { ValidationError } from "../../errors";
+    validateMemberInVoice,
+    validateClientInVoice,
+    validateSameVoiceChannel,
+} from "../../utils/validators";
+import {
+    assertPlayerIsPlaying,
+    getGuildMusicPlayer,
+    getMusicCommandContext,
+} from "./context";
 
-export class PauseCommand implements Command {
-    readonly cooldown: number;
+export class PauseCommand extends BaseCommand {
+    readonly cooldown = COOLDOWNS.FAST;
     readonly data: SharedSlashCommand;
 
     constructor() {
-        this.cooldown = 1;
+        super();
         this.data = new SlashCommandBuilder()
             .setName("pause")
             .setDescription("Pauses the current song.")
             .setContexts(InteractionContextType.Guild);
     }
 
-    private validatePreconditions(interaction: ChatInputCommandInteraction) {
-        const guild = interaction.guild!;
-        const member = interaction.member as GuildMember;
-
-        if (!inVoiceChannel(member)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.MEMBER_NOT_IN_VOICE,
-            });
-        }
-
-        if (!clientInVoiceChannelOf(guild)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.CLIENT_NOT_IN_VOICE,
-            });
-        }
-
-        if (!clientInSameVoiceChannelAs(member)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.MEMBER_NOT_IN_SAME_VOICE,
-            });
-        }
-    }
-
-    async run(interaction: ChatInputCommandInteraction) {
+    async run(interaction: ChatInputCommandInteraction): Promise<void> {
         try {
-            this.validatePreconditions(interaction);
+            const { guild, member } = getMusicCommandContext(interaction);
+            validateMemberInVoice(member);
+            validateClientInVoice(guild);
+            validateSameVoiceChannel(member);
         } catch (err) {
-            if (err instanceof Error) {
-                interaction
-                    .reply({ content: err.message, ephemeral: true })
-                    .catch(() => {});
-            }
+            await this.handleError(interaction, err);
             throw err;
         }
 
-        const player = musicPlayers.get(interaction.guildId!)!;
+        const { guild } = getMusicCommandContext(interaction);
+        const player = getGuildMusicPlayer(guild.id);
 
-        if (!player.isPlaying()) {
-            await interaction.reply({
-                content: "There is no song playing.",
-                ephemeral: true,
-            });
+        try {
+            assertPlayerIsPlaying(player);
+        } catch (err) {
+            await this.handleError(interaction, err);
             return;
         }
 
         if (!(await player.pause())) {
-            await interaction.reply({
-                content: "Song is already paused.",
-                ephemeral: true,
-            });
+            await this.replyWithError(interaction, "Song is already paused.");
             return;
         }
 
-        const embed = new EmbedBuilder()
-            .setColor(Colors.Red)
-            .setDescription(":pause_button:  -  Song paused");
-
+        const embed = this.createEmbed(":pause_button:  -  Song paused");
         await interaction.reply({ embeds: [embed] });
     }
 }

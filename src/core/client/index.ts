@@ -1,3 +1,5 @@
 export * from "./LavalinkClient";
 export * from "./MarmutClient";
-export * from "./PrismaClient";
+
+// Re-export convenience getters
+export { getLavalinkClient, getMarmutClient } from "./LavalinkClient";

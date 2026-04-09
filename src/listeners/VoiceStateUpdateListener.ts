@@ -81,7 +81,7 @@ export class VoiceStateUpdateListener implements ClientEventListener {
         if (newState.channelId === null) {
             this.handleChannelLeave(oldState);
         } else if (oldState.channelId === null) {
-            this.handleChannelJoin(oldState);
+            this.handleChannelJoin(newState);
         } else {
             this.handleChannelMove(oldState, newState);
         }

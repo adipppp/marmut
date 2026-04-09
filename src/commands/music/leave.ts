@@ -1,81 +1,47 @@
 import {
     ChatInputCommandInteraction,
-    Colors,
-    EmbedBuilder,
-    GuildMember,
     InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
-import { lavalinkClient } from "../../core/client";
-import { ValidationErrorCode } from "../../enums";
-import { ValidationError } from "../../errors";
-import { Command } from "../../types";
+import { BaseCommand } from "../BaseCommand";
+import { COOLDOWNS, env } from "../../config";
 import {
-    clientInSameVoiceChannelAs,
-    clientInVoiceChannelOf,
-    inVoiceChannel,
-} from "../../utils/functions";
+    validateMemberInVoice,
+    validateClientInVoice,
+    validateSameVoiceChannel,
+} from "../../utils/validators";
+import { leaveVoiceChannel } from "../../utils/functions";
+import { getMusicCommandContext } from "./context";
 
-const LEAVE_EMOJI = process.env.LEAVE_EMOJI;
-
-export class LeaveCommand implements Command {
-    readonly cooldown: number;
+export class LeaveCommand extends BaseCommand {
+    readonly cooldown = COOLDOWNS.SLOW;
     readonly data: SharedSlashCommand;
 
     constructor() {
-        this.cooldown = 2;
+        super();
         this.data = new SlashCommandBuilder()
             .setName("leave")
             .setDescription("Disconnects from the voice channel.")
             .setContexts(InteractionContextType.Guild);
     }
 
-    private validatePreconditions(interaction: ChatInputCommandInteraction) {
-        const guild = interaction.guild!;
-        const member = interaction.member as GuildMember;
-
-        if (!inVoiceChannel(member)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.MEMBER_NOT_IN_VOICE,
-            });
-        }
-
-        if (!clientInVoiceChannelOf(guild)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.CLIENT_NOT_IN_VOICE,
-            });
-        }
-
-        if (!clientInSameVoiceChannelAs(member)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.MEMBER_NOT_IN_SAME_VOICE,
-            });
-        }
-    }
-
-    async run(interaction: ChatInputCommandInteraction) {
+    async run(interaction: ChatInputCommandInteraction): Promise<void> {
         try {
-            this.validatePreconditions(interaction);
+            const { guild, member } = getMusicCommandContext(interaction);
+            validateMemberInVoice(member);
+            validateClientInVoice(guild);
+            validateSameVoiceChannel(member);
+
+            await leaveVoiceChannel(guild.id);
+
+            const embed = this.createEmbed(
+                `${env.ui.leaveEmoji}  -  Disconnected from the voice channel`,
+            );
+            await interaction.reply({ embeds: [embed] });
         } catch (err) {
-            if (err instanceof Error) {
-                interaction
-                    .reply({ content: err.message, ephemeral: true })
-                    .catch(() => {});
-            }
+            await this.handleError(interaction, err);
             throw err;
         }
-
-        const guildId = interaction.guildId!;
-
-        await lavalinkClient.leaveVoiceChannel(guildId);
-
-        const embed = new EmbedBuilder()
-            .setColor(Colors.Red)
-            .setDescription(
-                `${LEAVE_EMOJI}  -  Disconnected from the voice channel`,
-            );
-
-        await interaction.reply({ embeds: [embed] });
     }
 }

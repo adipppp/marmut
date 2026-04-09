@@ -1,64 +1,43 @@
 import {
     ButtonInteraction,
     ChatInputCommandInteraction,
-    GuildMember,
     InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
     Snowflake,
 } from "discord.js";
-import { Command } from "../../types";
-import {
-    clientInSameVoiceChannelAs,
-    clientInVoiceChannelOf,
-    inVoiceChannel,
-} from "../../utils/functions";
+import { BaseCommand } from "../BaseCommand";
+import { COOLDOWNS, TIMEOUTS } from "../../config";
 import { QueueView } from "../../views";
-import { musicPlayers } from "../../core/managers";
 import { ValidationErrorCode } from "../../enums";
 import { ValidationError } from "../../errors";
+import {
+    validateMemberInVoice,
+    validateClientInVoice,
+    validateSameVoiceChannel,
+} from "../../utils/validators";
+import {
+    assertPlayerIsPlaying,
+    getGuildMusicPlayer,
+    getMusicCommandContext,
+} from "./context";
 
-export class QueueCommand implements Command {
-    readonly cooldown: number;
+export class QueueCommand extends BaseCommand {
+    readonly cooldown = COOLDOWNS.FAST;
     readonly data: SharedSlashCommand;
 
     constructor() {
-        this.cooldown = 1;
+        super();
         this.data = new SlashCommandBuilder()
             .setName("queue")
             .setDescription("Displays the current song queue.")
             .setContexts(InteractionContextType.Guild);
     }
 
-    private validatePreconditions(
-        interaction: ButtonInteraction | ChatInputCommandInteraction,
-    ) {
-        const guild = interaction.guild!;
-        const member = interaction.member as GuildMember;
-
-        if (!inVoiceChannel(member)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.MEMBER_NOT_IN_VOICE,
-            });
-        }
-
-        if (!clientInVoiceChannelOf(guild)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.CLIENT_NOT_IN_VOICE,
-            });
-        }
-
-        if (!clientInSameVoiceChannelAs(member)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.MEMBER_NOT_IN_SAME_VOICE,
-            });
-        }
-    }
-
     private validateUser(
         interaction: ButtonInteraction,
         originalUserId: Snowflake,
-    ) {
+    ): void {
         if (interaction.user.id !== originalUserId) {
             throw new ValidationError({
                 code: ValidationErrorCode.QUEUE_MENU_NOT_FOR_USER,
@@ -69,44 +48,44 @@ export class QueueCommand implements Command {
     private async handleValidInteraction(
         interaction: ButtonInteraction,
         view: QueueView,
-    ) {
-        if (interaction.customId === "previous-page")
+    ): Promise<void> {
+        if (interaction.customId === "previous-page") {
             await view.setCurrentPage(view.getCurrentPage() - 1);
-        else if (interaction.customId === "next-page")
+        } else if (interaction.customId === "next-page") {
             await view.setCurrentPage(view.getCurrentPage() + 1);
+        }
 
         const actionRow = await view.getActionRow();
         const embed = await view.getEmbed();
 
-        if (actionRow.components.length === 0)
+        if (actionRow.components.length === 0) {
             await interaction.update({ components: [], embeds: [embed] });
-        else
+        } else {
             await interaction.update({
                 components: [actionRow],
                 embeds: [embed],
             });
+        }
     }
 
-    async run(interaction: ChatInputCommandInteraction) {
+    async run(interaction: ChatInputCommandInteraction): Promise<void> {
         try {
-            this.validatePreconditions(interaction);
+            const { guild, member } = getMusicCommandContext(interaction);
+            validateMemberInVoice(member);
+            validateClientInVoice(guild);
+            validateSameVoiceChannel(member);
         } catch (err) {
-            if (err instanceof Error) {
-                interaction
-                    .reply({ content: err.message, ephemeral: true })
-                    .catch(() => {});
-            }
+            await this.handleError(interaction, err);
             throw err;
         }
 
-        const guildId = interaction.guildId!;
-        const player = musicPlayers.get(guildId)!;
+        const { guild } = getMusicCommandContext(interaction);
+        const player = getGuildMusicPlayer(guild.id);
 
-        if (!player.isPlaying()) {
-            await interaction.reply({
-                content: "There is no song playing.",
-                ephemeral: true,
-            });
+        try {
+            assertPlayerIsPlaying(player);
+        } catch (err) {
+            await this.handleError(interaction, err);
             return;
         }
 
@@ -124,25 +103,48 @@ export class QueueCommand implements Command {
             embeds: [embed],
         });
         const collector = message.createMessageComponentCollector({
-            time: 60_000,
+            time: TIMEOUTS.SEARCH_MENU_MS,
         });
 
         const originalUserId = interaction.user.id;
 
-        collector.on("collect", async (interaction: ButtonInteraction) => {
-            try {
-                this.validateUser(interaction, originalUserId);
-                this.validatePreconditions(interaction);
-                await this.handleValidInteraction(interaction, view);
-            } catch (err) {
-                console.log(err);
-                if (err instanceof Error) {
-                    return;
+        collector.on(
+            "collect",
+            async (buttonInteraction: ButtonInteraction) => {
+                try {
+                    this.validateUser(buttonInteraction, originalUserId);
+
+                    const { guild, member } =
+                        getMusicCommandContext(buttonInteraction);
+                    validateMemberInVoice(member);
+                    validateClientInVoice(guild);
+                    validateSameVoiceChannel(member);
+
+                    await this.handleValidInteraction(buttonInteraction, view);
+                } catch (err) {
+                    console.error(err);
+                    if (err instanceof Error) {
+                        await buttonInteraction
+                            .reply({ content: err.message, ephemeral: true })
+                            .catch(this.logError);
+                    }
                 }
-                await interaction
-                    .reply({ content: err.message, ephemeral: true })
-                    .catch(() => {});
-            }
+            },
+        );
+
+        collector.on("end", async () => {
+            const finalActionRow = await view.getActionRow();
+            finalActionRow.components.forEach((button) =>
+                button.setDisabled(true),
+            );
+            const embed = await view.getEmbed();
+
+            const options =
+                finalActionRow.components.length === 0
+                    ? { components: [], embeds: [embed] }
+                    : { components: [finalActionRow], embeds: [embed] };
+
+            await message.edit(options).catch(this.logError);
         });
     }
 }

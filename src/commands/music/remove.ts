@@ -1,28 +1,30 @@
 import {
     ChatInputCommandInteraction,
-    Colors,
-    EmbedBuilder,
-    GuildMember,
     InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
-import { Command } from "../../types";
-import {
-    clientInSameVoiceChannelAs,
-    clientInVoiceChannelOf,
-    inVoiceChannel,
-} from "../../utils/functions";
-import { musicPlayers } from "../../core/managers";
+import { BaseCommand } from "../BaseCommand";
+import { COOLDOWNS } from "../../config";
 import { ValidationErrorCode } from "../../enums";
 import { ValidationError } from "../../errors";
+import {
+    validateMemberInVoice,
+    validateClientInVoice,
+    validateSameVoiceChannel,
+} from "../../utils/validators";
+import {
+    assertPlayerIsPlaying,
+    getGuildMusicPlayer,
+    getMusicCommandContext,
+} from "./context";
 
-export class RemoveCommand implements Command {
-    readonly cooldown: number;
+export class RemoveCommand extends BaseCommand {
+    readonly cooldown = COOLDOWNS.FAST;
     readonly data: SharedSlashCommand;
 
     constructor() {
-        this.cooldown = 1;
+        super();
         this.data = new SlashCommandBuilder()
             .setName("remove")
             .setDescription("Removes a song from the queue.")
@@ -37,57 +39,35 @@ export class RemoveCommand implements Command {
             );
     }
 
-    private validatePreconditions(interaction: ChatInputCommandInteraction) {
-        const position = interaction.options.getInteger("position", true);
-
+    private validatePosition(position: number): void {
         if (position < 1) {
             throw new ValidationError({
                 code: ValidationErrorCode.NON_POSITIVE_SONG_POSITION,
             });
         }
-
-        const guild = interaction.guild!;
-        const member = interaction.member as GuildMember;
-
-        if (!inVoiceChannel(member)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.MEMBER_NOT_IN_VOICE,
-            });
-        }
-
-        if (!clientInVoiceChannelOf(guild)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.CLIENT_NOT_IN_VOICE,
-            });
-        }
-
-        if (!clientInSameVoiceChannelAs(member)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.MEMBER_NOT_IN_SAME_VOICE,
-            });
-        }
     }
 
-    async run(interaction: ChatInputCommandInteraction) {
+    async run(interaction: ChatInputCommandInteraction): Promise<void> {
         try {
-            this.validatePreconditions(interaction);
+            const position = interaction.options.getInteger("position", true);
+            this.validatePosition(position);
+
+            const { guild, member } = getMusicCommandContext(interaction);
+            validateMemberInVoice(member);
+            validateClientInVoice(guild);
+            validateSameVoiceChannel(member);
         } catch (err) {
-            if (err instanceof Error) {
-                interaction
-                    .reply({ content: err.message, ephemeral: true })
-                    .catch(() => {});
-            }
+            await this.handleError(interaction, err);
             throw err;
         }
 
-        const guildId = interaction.guildId!;
-        const player = musicPlayers.get(guildId)!;
+        const { guild } = getMusicCommandContext(interaction);
+        const player = getGuildMusicPlayer(guild.id);
 
-        if (!player.isPlaying()) {
-            await interaction.reply({
-                content: "There is no song playing.",
-                ephemeral: true,
-            });
+        try {
+            assertPlayerIsPlaying(player);
+        } catch (err) {
+            await this.handleError(interaction, err);
             return;
         }
 
@@ -95,20 +75,16 @@ export class RemoveCommand implements Command {
         const position = interaction.options.getInteger("position", true) - 1;
 
         if (position >= queue.length) {
-            await interaction.reply({
-                content:
-                    "Position is out of range. Please enter a valid song position.",
-                ephemeral: true,
-            });
+            await this.replyWithError(
+                interaction,
+                "Position is out of range. Please enter a valid song position.",
+            );
             return;
         }
 
         await player.removeSong(position);
 
-        const embed = new EmbedBuilder()
-            .setColor(Colors.Red)
-            .setDescription(":x:  -  Song removed from queue");
-
+        const embed = this.createEmbed(":x:  -  Song removed from queue");
         await interaction.reply({ embeds: [embed] });
     }
 }

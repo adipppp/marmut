@@ -1,4 +1,5 @@
 import { Guild } from "discord.js";
+import { TIMEOUTS } from "../../config";
 import { clientIsPlayingIn, leaveVoiceChannel } from "../../utils/functions";
 
 export class GuildVoiceState {
@@ -61,7 +62,7 @@ export class GuildVoiceState {
                     return;
                 }
                 this.cancelAutoDisconnectTimer();
-            }, 300000);
+            }, TIMEOUTS.AUTO_DISCONNECT_MS);
         }
     }
 

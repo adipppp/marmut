@@ -1,31 +1,28 @@
 import {
     ChatInputCommandInteraction,
-    Colors,
-    EmbedBuilder,
-    GuildMember,
     InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
     VoiceBasedChannel,
 } from "discord.js";
+import { BaseCommand } from "../BaseCommand";
+import { COOLDOWNS, env } from "../../config";
 import { ValidationErrorCode } from "../../enums";
 import { ValidationError } from "../../errors";
-import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientIsPlayingIn,
     inVoiceChannel,
     joinVoiceChannel,
 } from "../../utils/functions";
+import { getMusicCommandContext } from "./context";
 
-const JOIN_EMOJI = process.env.JOIN_EMOJI;
-
-export class JoinCommand implements Command {
-    readonly cooldown: number;
+export class JoinCommand extends BaseCommand {
+    readonly cooldown = COOLDOWNS.SLOW;
     readonly data: SharedSlashCommand;
 
     constructor() {
-        this.cooldown = 2;
+        super();
         this.data = new SlashCommandBuilder()
             .setName("join")
             .setDescription("Connects to a voice channel.")
@@ -40,9 +37,9 @@ export class JoinCommand implements Command {
             );
     }
 
-    private validateArgs(interaction: ChatInputCommandInteraction) {
+    private validateArgs(interaction: ChatInputCommandInteraction): void {
         const channel = interaction.options.getChannel("channel");
-        const guild = interaction.guild!;
+        const { guild, member } = getMusicCommandContext(interaction);
 
         if (channel) {
             const channelId = channel.id;
@@ -54,8 +51,6 @@ export class JoinCommand implements Command {
                 });
             }
         } else {
-            const member = interaction.member as GuildMember;
-
             if (!inVoiceChannel(member)) {
                 throw new ValidationError({
                     code: ValidationErrorCode.MISSING_VOICE_CHANNEL,
@@ -64,11 +59,12 @@ export class JoinCommand implements Command {
         }
     }
 
-    private validatePreconditions(interaction: ChatInputCommandInteraction) {
+    private validatePreconditions(
+        interaction: ChatInputCommandInteraction,
+    ): void {
         this.validateArgs(interaction);
 
-        const guild = interaction.guild!;
-        const member = interaction.member as GuildMember;
+        const { guild, member } = getMusicCommandContext(interaction);
 
         const clientInSameVoiceChannelAsMember =
             clientInSameVoiceChannelAs(member);
@@ -89,35 +85,30 @@ export class JoinCommand implements Command {
         }
     }
 
-    async run(interaction: ChatInputCommandInteraction) {
+    async run(interaction: ChatInputCommandInteraction): Promise<void> {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (err instanceof Error) {
-                interaction
-                    .reply({ content: err.message, ephemeral: true })
-                    .catch(() => {});
-            }
+            await this.handleError(interaction, err);
             throw err;
         }
 
-        const guild = interaction.guild!;
+        const { guild, member } = getMusicCommandContext(interaction);
 
         const clientId = interaction.client.user.id;
         const clientVoiceState = guild.voiceStates.cache.get(clientId);
         const clientVoiceChannelId = clientVoiceState?.channelId;
 
-        const member = interaction.member as GuildMember;
         const memberVoiceChannel = member.voice.channel!;
 
         const channel = interaction.options.getChannel("channel");
         const channelId = (channel ?? memberVoiceChannel).id;
 
         if (clientVoiceChannelId === channelId) {
-            await interaction.reply({
-                content: "Already connected to the voice channel.",
-                ephemeral: true,
-            });
+            await this.replyWithError(
+                interaction,
+                "Already connected to the voice channel.",
+            );
             return;
         }
 
@@ -125,10 +116,9 @@ export class JoinCommand implements Command {
             member.voice.channel) as VoiceBasedChannel;
         await joinVoiceChannel(voiceChannel);
 
-        const embed = new EmbedBuilder()
-            .setColor(Colors.Red)
-            .setDescription(`${JOIN_EMOJI}  -  Connected to the voice channel`);
-
+        const embed = this.createEmbed(
+            `${env.ui.joinEmoji}  -  Connected to the voice channel`,
+        );
         await interaction.reply({ embeds: [embed] });
     }
 }

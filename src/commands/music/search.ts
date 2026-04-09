@@ -1,19 +1,18 @@
 import {
     ButtonInteraction,
     ChatInputCommandInteraction,
-    GuildMember,
     InteractionContextType,
     SharedSlashCommand,
     SlashCommandBuilder,
     Snowflake,
 } from "discord.js";
 import { LoadType, Track } from "shoukaku";
+import { BaseCommand } from "../BaseCommand";
+import { COOLDOWNS, TIMEOUTS } from "../../config";
 import { Song } from "../../core/music";
 import { SearchView } from "../../views";
-import { musicPlayers } from "../../core/managers";
 import { LavalinkErrorCode, ValidationErrorCode } from "../../enums";
 import { LavalinkError, ValidationError } from "../../errors";
-import { Command } from "../../types";
 import {
     clientInSameVoiceChannelAs,
     clientIsPlayingIn,
@@ -23,13 +22,14 @@ import {
     inVoiceChannel,
     joinVoiceChannel,
 } from "../../utils/functions";
+import { getGuildMusicPlayer, getMusicCommandContext } from "./context";
 
-export class SearchCommand implements Command {
-    readonly cooldown: number;
+export class SearchCommand extends BaseCommand {
+    readonly cooldown = COOLDOWNS.DEFAULT;
     readonly data: SharedSlashCommand;
 
     constructor() {
-        this.cooldown = 3;
+        super();
         this.data = new SlashCommandBuilder()
             .setName("search")
             .setDescription("Searches for songs to play.")
@@ -44,9 +44,8 @@ export class SearchCommand implements Command {
 
     private validatePreconditions(
         interaction: ButtonInteraction | ChatInputCommandInteraction,
-    ) {
-        const guild = interaction.guild!;
-        const member = interaction.member as GuildMember;
+    ): void {
+        const { guild, member } = getMusicCommandContext(interaction);
 
         if (!inVoiceChannel(member)) {
             throw new ValidationError({
@@ -75,7 +74,7 @@ export class SearchCommand implements Command {
     private validateUser(
         interaction: ButtonInteraction,
         originalUserId: Snowflake,
-    ) {
+    ): void {
         if (interaction.user.id !== originalUserId) {
             throw new ValidationError({
                 code: ValidationErrorCode.SEARCH_MENU_NOT_FOR_USER,
@@ -83,7 +82,7 @@ export class SearchCommand implements Command {
         }
     }
 
-    private async getTracks(query: string) {
+    private async getTracks(query: string): Promise<Track[]> {
         const response = await getSearchResults(query);
         if (
             response === undefined ||
@@ -103,7 +102,7 @@ export class SearchCommand implements Command {
         }
     }
 
-    private createSongs(results: Track[]) {
+    private createSongs(results: Track[]): Song[] {
         return results.map(
             (result) =>
                 new Song({
@@ -115,57 +114,46 @@ export class SearchCommand implements Command {
         );
     }
 
-    private createEmbed(song: Song, currentIndex: number) {
-        if (currentIndex === -1) {
-            return createNowPlayingEmbed(song);
-        } else {
-            return createAddedToQueueEmbed(song);
-        }
-    }
-
     private async handleValidInteraction(
         interaction: ButtonInteraction,
         songs: Song[],
-    ) {
+    ): Promise<void> {
         await interaction.deferReply();
 
-        const guild = interaction.guild!;
-        const member = interaction.member as GuildMember;
+        const { guild, member } = getMusicCommandContext(interaction);
 
         if (!clientInSameVoiceChannelAs(member) && !clientIsPlayingIn(guild)) {
             await joinVoiceChannel(member.voice.channel!);
         }
 
-        const guildId = guild.id;
-        const player = musicPlayers.get(guildId)!;
+        const player = getGuildMusicPlayer(guild.id);
 
         const customIdInt = parseInt(interaction.customId);
         const song = songs[customIdInt - 1];
 
         const currentIndex = player.getCurrentIndex();
-        const embed = this.createEmbed(song, currentIndex);
+        const embed =
+            currentIndex === -1
+                ? createNowPlayingEmbed(song)
+                : createAddedToQueueEmbed(song);
 
         try {
             await player.play(song, interaction.channel!);
         } catch (err) {
-            interaction
+            await interaction
                 .editReply("Bot is not connected to any voice channel.")
-                .catch(() => {});
+                .catch(this.logError);
             throw err;
         }
 
         await interaction.editReply({ embeds: [embed] });
     }
 
-    async run(interaction: ChatInputCommandInteraction) {
+    async run(interaction: ChatInputCommandInteraction): Promise<void> {
         try {
             this.validatePreconditions(interaction);
         } catch (err) {
-            if (err instanceof Error) {
-                interaction
-                    .reply({ content: err.message, ephemeral: true })
-                    .catch(() => {});
-            }
+            await this.handleError(interaction, err);
             throw err;
         }
 
@@ -179,8 +167,7 @@ export class SearchCommand implements Command {
             return;
         }
 
-        const guild = interaction.guild!;
-        const member = interaction.member as GuildMember;
+        const { guild, member } = getMusicCommandContext(interaction);
 
         if (!clientInSameVoiceChannelAs(member) && !clientIsPlayingIn(guild)) {
             await joinVoiceChannel(member.voice.channel!);
@@ -197,34 +184,44 @@ export class SearchCommand implements Command {
             embeds: [searchMenu],
         });
         const collector = message.createMessageComponentCollector({
-            time: 60_000,
+            time: TIMEOUTS.SEARCH_MENU_MS,
         });
 
         const originalUserId = interaction.user.id;
 
-        collector.on("collect", async (interaction: ButtonInteraction) => {
-            try {
-                this.validateUser(interaction, originalUserId);
-                this.validatePreconditions(interaction);
+        collector.on(
+            "collect",
+            async (buttonInteraction: ButtonInteraction) => {
+                try {
+                    this.validateUser(buttonInteraction, originalUserId);
+                    this.validatePreconditions(buttonInteraction);
 
-                collector.stop();
+                    collector.stop();
 
-                rows.forEach((row) =>
-                    row.components.forEach((button) =>
-                        button.setDisabled(true),
-                    ),
-                );
+                    rows.forEach((row) =>
+                        row.components.forEach((button) =>
+                            button.setDisabled(true),
+                        ),
+                    );
 
-                interaction.message.edit({ components: rows });
-                await this.handleValidInteraction(interaction, songs);
-            } catch (err) {
-                console.error(err);
-                if (err instanceof Error) {
-                    interaction
-                        .reply({ content: err.message, ephemeral: true })
-                        .catch(() => {});
+                    await buttonInteraction.message.edit({ components: rows });
+                    await this.handleValidInteraction(buttonInteraction, songs);
+                } catch (err) {
+                    console.error(err);
+                    if (err instanceof Error) {
+                        await buttonInteraction
+                            .reply({ content: err.message, ephemeral: true })
+                            .catch(this.logError);
+                    }
                 }
-            }
+            },
+        );
+
+        collector.on("end", async () => {
+            rows.forEach((row) =>
+                row.components.forEach((button) => button.setDisabled(true)),
+            );
+            await message.edit({ components: rows }).catch(this.logError);
         });
     }
 }
