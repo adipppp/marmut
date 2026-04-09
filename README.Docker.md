@@ -1,5 +1,7 @@
 ### Running with Docker Compose
 
+Copy `.env.example` to `.env` and fill in all required values before first run.
+
 This stack now includes three services:
 
 - `marmut`: the Discord bot
