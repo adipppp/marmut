@@ -20,7 +20,7 @@ import {
     getMusicCommandContext,
 } from "./context";
 
-export class SeekCommand extends BaseCommand {
+export default class SeekCommand extends BaseCommand {
     readonly cooldown = COOLDOWNS.DEFAULT;
     readonly data: SharedSlashCommand;
 
@@ -52,6 +52,7 @@ export class SeekCommand extends BaseCommand {
         const { guild } = getMusicCommandContext(interaction);
         const player = getGuildMusicPlayer(guild.id);
         const position = interaction.options.getInteger("position", true);
+        const positionMs = position * MUSIC_PLAYER.MS_PER_SECOND;
 
         try {
             assertPlayerIsPlaying(player);
@@ -61,7 +62,7 @@ export class SeekCommand extends BaseCommand {
         }
 
         try {
-            await player.seek(position);
+            await player.seek(positionMs);
         } catch (err) {
             if (err instanceof MusicPlayerError) {
                 if (

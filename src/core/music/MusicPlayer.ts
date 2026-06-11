@@ -16,12 +16,14 @@ export class MusicPlayer {
     private currentIndex: number;
     private repeatMode: RepeatMode;
     private textChannelId?: Snowflake;
+    private isSkipping: boolean;
 
     constructor(guildId: Snowflake, player: Player) {
         this.guildId = guildId;
         this.songs = [];
         this.currentIndex = -1;
         this.repeatMode = RepeatMode.Off;
+        this.isSkipping = false;
 
         player.setGlobalVolume(DEFAULT_VOLUME);
 
@@ -64,17 +66,16 @@ export class MusicPlayer {
     }
 
     private async handlePlayerEnd(): Promise<void> {
-        this.currentIndex = this.getNextIndex();
+        this.currentIndex = this.getNextIndex(this.isSkipping);
+        this.isSkipping = false;
 
         if (this.songs.length === 0) {
-            this.currentIndex = -1;
             this.handleGuildVoiceState();
             return;
         }
 
         if (this.currentIndex >= this.songs.length) {
             this.currentIndex = -1;
-            this.clearSongs();
             this.handleGuildVoiceState();
             return;
         }
@@ -103,7 +104,7 @@ export class MusicPlayer {
             .setTimestamp()
             .setFooter({ text: "Marmut", iconURL: env.ui.marmutIcon40px })
             .setDescription(
-                `${env.ui.errorEmoji}  -  An error has occured on the music player!`,
+                `${env.ui.errorEmoji}  -  An error has occurred on the music player!`,
             );
     }
 
@@ -115,13 +116,15 @@ export class MusicPlayer {
         this.songs.length = 0;
     }
 
-    private getNextIndex(): number {
-        if (this.songs.length > 0 && this.repeatMode === RepeatMode.Queue) {
-            return (this.currentIndex + 1) % this.songs.length;
+    private getNextIndex(forceNext = false): number {
+        if (this.songs.length === 0) return -1;
+
+        if (this.repeatMode === RepeatMode.Song && !forceNext) {
+            return Math.max(0, this.currentIndex);
         }
 
-        if (this.repeatMode === RepeatMode.Song) {
-            return this.currentIndex;
+        if (this.repeatMode === RepeatMode.Queue) {
+            return (this.currentIndex + 1) % this.songs.length;
         }
 
         return this.currentIndex + 1;
@@ -155,16 +158,17 @@ export class MusicPlayer {
             return;
         }
 
+        this.currentIndex = 0;
         try {
             await this.playSong(song);
         } catch (err) {
             console.error(err);
             this.handleError(err).catch(console.error);
             this.songs.pop();
+            this.currentIndex = -1;
             throw err;
         }
 
-        this.currentIndex = 0;
         this.handleGuildVoiceState();
     }
 
@@ -181,6 +185,7 @@ export class MusicPlayer {
         if (player.paused) {
             await player.setPaused(false);
         }
+        this.isSkipping = true;
         await player.stopTrack();
     }
 
@@ -230,25 +235,22 @@ export class MusicPlayer {
         }
     }
 
-    async seek(position: number): Promise<void> {
-        if (position < 0 || this.currentIndex < 0) {
+    async seek(positionMs: number): Promise<void> {
+        if (positionMs < 0 || this.currentIndex < 0) {
             throw new MusicPlayerError({
                 code: MusicPlayerErrorCode.SEEK_POSITION_OUT_OF_RANGE,
             });
         }
 
         const currentSong = this.songs[this.currentIndex];
-        const songDurationInSeconds = Number(
-            currentSong.duration / BigInt(MS_PER_SECOND),
-        );
-        if (position > songDurationInSeconds) {
+        if (BigInt(positionMs) > currentSong.duration) {
             throw new MusicPlayerError({
                 code: MusicPlayerErrorCode.SEEK_POSITION_OUT_OF_RANGE,
             });
         }
 
         const player = this.getPlayer();
-        await player.seekTo(position * MS_PER_SECOND);
+        await player.seekTo(positionMs);
     }
 
     getVolume(): number {
