@@ -42,15 +42,14 @@ export class SearchView {
         }
 
         const songCount = Math.min(songs.length, 10);
-        let desc = `${NUMBER_EMOJIS[0].padEnd(8)}[${songs[0].title}](${
-            songs[0].videoUrl
-        })`;
+        let desc = "";
 
-        for (let i = 1; i < songCount; i++) {
+        for (let i = 0; i < songCount; i++) {
             const song = songs[i];
-            desc += `\n\n[${NUMBER_EMOJIS[i].padEnd(8)}${song.title}](${
-                song.videoUrl
-            })`;
+            desc += `${NUMBER_EMOJIS[i].padEnd(8)}[${song.title}](${song.videoUrl})`;
+            if (i < songCount - 1) {
+                desc += "\n\n";
+            }
         }
 
         return desc;

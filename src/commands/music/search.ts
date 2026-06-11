@@ -19,9 +19,9 @@ import {
     createAddedToQueueEmbed,
     createNowPlayingEmbed,
     getSearchResults,
-    inVoiceChannel,
     joinVoiceChannel,
 } from "../../utils/functions";
+import { validateVoiceState } from "../../utils/validators";
 import { getGuildMusicPlayer, getMusicCommandContext } from "./context";
 
 export class SearchCommand extends BaseCommand {
@@ -40,35 +40,6 @@ export class SearchCommand extends BaseCommand {
                     .setDescription("Something to search.")
                     .setRequired(true),
             );
-    }
-
-    private validatePreconditions(
-        interaction: ButtonInteraction | ChatInputCommandInteraction,
-    ): void {
-        const { guild, member } = getMusicCommandContext(interaction);
-
-        if (!inVoiceChannel(member)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.MEMBER_NOT_IN_VOICE,
-            });
-        }
-
-        const clientInSameVoiceChannelAsMember =
-            clientInSameVoiceChannelAs(member);
-
-        if (!clientInSameVoiceChannelAsMember && clientIsPlayingIn(guild)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.MEMBER_NOT_IN_SAME_VOICE,
-            });
-        }
-
-        const voiceChannel = member.voice.channel!;
-
-        if (!clientInSameVoiceChannelAsMember && !voiceChannel.joinable) {
-            throw new ValidationError({
-                code: ValidationErrorCode.NON_JOINABLE_VOICE_CHANNEL,
-            });
-        }
     }
 
     private validateUser(
@@ -110,6 +81,7 @@ export class SearchCommand extends BaseCommand {
                     thumbnailUrl: result.info.artworkUrl ?? "",
                     videoUrl: result.info.uri ?? "",
                     duration: BigInt(result.info.length),
+                    encoded: result.encoded,
                 }),
         );
     }
@@ -140,10 +112,10 @@ export class SearchCommand extends BaseCommand {
         try {
             await player.play(song, interaction.channel!);
         } catch (err) {
-            await interaction
-                .editReply("Bot is not connected to any voice channel.")
-                .catch(this.logError);
-            throw err;
+            await this.handleError(interaction, err);
+            if (!(err instanceof ValidationError)) {
+                throw err;
+            }
         }
 
         await interaction.editReply({ embeds: [embed] });
@@ -151,7 +123,10 @@ export class SearchCommand extends BaseCommand {
 
     async run(interaction: ChatInputCommandInteraction): Promise<void> {
         try {
-            this.validatePreconditions(interaction);
+            validateVoiceState(interaction, {
+                requireNotPlayingElsewhere: true,
+                requireJoinableChannel: true,
+            });
         } catch (err) {
             await this.handleError(interaction, err);
             throw err;
@@ -194,7 +169,10 @@ export class SearchCommand extends BaseCommand {
             async (buttonInteraction: ButtonInteraction) => {
                 try {
                     this.validateUser(buttonInteraction, originalUserId);
-                    this.validatePreconditions(buttonInteraction);
+                    validateVoiceState(buttonInteraction, {
+                        requireNotPlayingElsewhere: true,
+                        requireJoinableChannel: true,
+                    });
 
                     collector.stop();
 

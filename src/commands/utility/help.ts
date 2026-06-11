@@ -4,15 +4,16 @@ import {
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
-import { Command } from "../../types";
+import { BaseCommand } from "../BaseCommand";
+import { COOLDOWNS } from "../../config";
 import { helpView } from "../../views";
 
-export class HelpCommand implements Command {
-    readonly cooldown: number;
+export class HelpCommand extends BaseCommand {
+    readonly cooldown = COOLDOWNS.SLOW;
     readonly data: SharedSlashCommand;
 
     constructor() {
-        this.cooldown = 2;
+        super();
         this.data = new SlashCommandBuilder()
             .setName("help")
             .setDescription("Displays the list of available commands.")
@@ -27,16 +28,15 @@ export class HelpCommand implements Command {
             );
     }
 
-    async run(interaction: ChatInputCommandInteraction) {
+    async run(interaction: ChatInputCommandInteraction): Promise<void> {
         const command = interaction.options.getString("command");
         const embed = helpView.getEmbed(command?.trim().toLowerCase());
 
         if (embed === undefined) {
-            await interaction.reply({
-                content:
-                    "The help page for the specified command was not found.",
-                ephemeral: true,
-            });
+            await this.replyWithError(
+                interaction,
+                "The help page for the specified command was not found.",
+            );
             return;
         }
 

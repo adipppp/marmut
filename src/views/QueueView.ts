@@ -2,14 +2,14 @@ import {
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
-    Colors,
     EmbedBuilder,
 } from "discord.js";
 import { MusicPlayer } from "../core/music";
+import { EMBED_COLOR } from "../config";
+import { millisecondsToHHMMSS } from "../utils/functions";
 
 export class QueueView {
     private readonly player: MusicPlayer;
-    private readonly embed: EmbedBuilder;
     private currentPage: number;
     private previousButton?: ButtonBuilder;
     private nextButton?: ButtonBuilder;
@@ -17,69 +17,43 @@ export class QueueView {
 
     constructor(player: MusicPlayer) {
         this.player = player;
-        this.embed = new EmbedBuilder();
         this.currentPage = 1;
     }
 
-    private createPreviousButton() {
+    private createPreviousButton(): ButtonBuilder {
         return new ButtonBuilder()
             .setCustomId("previous-page")
             .setEmoji({ name: "⬅" })
             .setStyle(ButtonStyle.Success);
     }
 
-    private createNextButton() {
+    private createNextButton(): ButtonBuilder {
         return new ButtonBuilder()
             .setCustomId("next-page")
             .setEmoji({ name: "➡️" })
             .setStyle(ButtonStyle.Success);
     }
 
-    private millisecondsToHHMMSS(ms: number) {
-        if (Math.trunc(ms) !== ms) {
-            throw new Error("seconds must be an integer");
-        }
-
-        if (ms > 86400000) {
-            throw new Error("Cannot convert more than 24 hours");
-        }
-
-        let seconds = Math.trunc(ms / 1000);
-        let minutes = Math.trunc(seconds / 60);
-        seconds = seconds % 60;
-        const hours = Math.trunc(minutes / 60);
-        minutes = minutes % 60;
-
-        const secondsString = seconds.toString().padStart(2, "0");
-        const minutesString = minutes.toString().padStart(2, "0");
-        const hoursString = hours.toString().padStart(2, "0");
-
-        return `${hoursString}:${minutesString}:${secondsString}`;
-    }
-
-    getCurrentPage() {
+    getCurrentPage(): number {
         return this.currentPage;
     }
 
-    async setCurrentPage(page: number) {
-        if (Math.trunc(page) !== page) {
+    async setCurrentPage(page: number): Promise<void> {
+        if (!Number.isInteger(page)) {
             throw new Error("Page number must be an integer");
         }
 
-        if (page < 1) {
-            throw new Error("Page number cannot be less than 1");
-        }
-
         const queue = await this.player.getQueue();
+        const maxPages = Math.max(1, Math.ceil(queue.length / 5));
 
-        if (page > Math.ceil(queue.length / 5)) {
-            this.currentPage = Math.ceil(queue.length / 5);
+        if (page > maxPages) {
+            this.currentPage = maxPages;
         } else {
-            this.currentPage = page;
+            this.currentPage = Math.max(1, page);
         }
     }
 
-    async getActionRow() {
+    async getActionRow(): Promise<ActionRowBuilder<ButtonBuilder>> {
         if (!this.actionRow) {
             this.actionRow = new ActionRowBuilder();
         }
@@ -103,37 +77,43 @@ export class QueueView {
         return this.actionRow;
     }
 
-    async getEmbed() {
+    async getEmbed(): Promise<EmbedBuilder> {
         const queue = await this.player.getQueue();
         const currentPage = this.currentPage;
+
+        const embed = new EmbedBuilder();
 
         const currentSongIndex = this.player.getCurrentIndex();
         const currentSong = queue[currentSongIndex];
 
-        const currentSongPlayback = this.player.getCurrentSongPlayback();
-        const formattedDuration =
-            this.millisecondsToHHMMSS(currentSongPlayback);
+        if (!currentSong) return embed.setDescription("Queue is empty.");
 
-        const embed = this.embed
-            .setColor(Colors.Red)
+        const currentPos = millisecondsToHHMMSS(this.player.getCurrentSongPlayback());
+        const totalDuration = millisecondsToHHMMSS(Number(currentSong.duration));
+
+        embed
+            .setColor(EMBED_COLOR)
             .setTitle(":arrow_forward:  -  Now Playing")
             .setDescription(
-                `[${currentSong.title} - ${formattedDuration}](${currentSong.videoUrl})`
+                `[${currentSong.title} - ${currentPos} / ${totalDuration}](${currentSong.videoUrl})`,
             )
             .setThumbnail(currentSong.thumbnailUrl);
 
         if (queue.length <= 1) return embed;
 
         const lowerIndex = (currentPage - 1) * 5;
-        const songs = queue.slice(lowerIndex, lowerIndex + 5);
+        const songsWithIndices = queue
+            .map((song, index) => ({ song, index }))
+            .slice(lowerIndex, lowerIndex + 5)
+            .filter(({ index }) => index !== currentSongIndex);
+
+        if (songsWithIndices.length === 0) return embed;
 
         let value = "";
-
-        for (let i = 0; i < songs.length; i++) {
-            value += `${i + lowerIndex + 1}. [${songs[i].title}](${
-                songs[i].videoUrl
-            })`;
-            if (i < songs.length - 1) {
+        for (let i = 0; i < songsWithIndices.length; i++) {
+            const { song, index } = songsWithIndices[i];
+            value += `${index + 1}. [${song.title}](${song.videoUrl})`;
+            if (i < songsWithIndices.length - 1) {
                 value += "\n";
             }
         }

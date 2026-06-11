@@ -8,7 +8,7 @@ import { LoadType, Track } from "shoukaku";
 import { BaseCommand } from "../BaseCommand";
 import { COOLDOWNS } from "../../config";
 import { Song } from "../../core/music";
-import { LavalinkErrorCode, ValidationErrorCode } from "../../enums";
+import { LavalinkErrorCode } from "../../enums";
 import { LavalinkError, ValidationError } from "../../errors";
 import {
     clientInSameVoiceChannelAs,
@@ -16,9 +16,9 @@ import {
     createAddedToQueueEmbed,
     createNowPlayingEmbed,
     getSearchResults,
-    inVoiceChannel,
     joinVoiceChannel,
 } from "../../utils/functions";
+import { validateVoiceState } from "../../utils/validators";
 import { getGuildMusicPlayer, getMusicCommandContext } from "./context";
 
 export class PlayCommand extends BaseCommand {
@@ -39,35 +39,6 @@ export class PlayCommand extends BaseCommand {
                     )
                     .setRequired(true),
             );
-    }
-
-    private validatePreconditions(
-        interaction: ChatInputCommandInteraction,
-    ): void {
-        const { guild, member } = getMusicCommandContext(interaction);
-
-        if (!inVoiceChannel(member)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.MEMBER_NOT_IN_VOICE,
-            });
-        }
-
-        const clientInSameVoiceChannelAsMember =
-            clientInSameVoiceChannelAs(member);
-
-        if (!clientInSameVoiceChannelAsMember && clientIsPlayingIn(guild)) {
-            throw new ValidationError({
-                code: ValidationErrorCode.MEMBER_NOT_IN_SAME_VOICE,
-            });
-        }
-
-        const voiceChannel = member.voice.channel!;
-
-        if (!clientInSameVoiceChannelAsMember && !voiceChannel.joinable) {
-            throw new ValidationError({
-                code: ValidationErrorCode.NON_JOINABLE_VOICE_CHANNEL,
-            });
-        }
     }
 
     private async getTrack(query: string): Promise<Track> {
@@ -97,12 +68,16 @@ export class PlayCommand extends BaseCommand {
             thumbnailUrl: info.artworkUrl ?? "",
             videoUrl: info.uri ?? "",
             duration: BigInt(info.length),
+            encoded: track.encoded,
         });
     }
 
     async run(interaction: ChatInputCommandInteraction): Promise<void> {
         try {
-            this.validatePreconditions(interaction);
+            validateVoiceState(interaction, {
+                requireNotPlayingElsewhere: true,
+                requireJoinableChannel: true,
+            });
         } catch (err) {
             await this.handleError(interaction, err);
             throw err;
@@ -116,9 +91,7 @@ export class PlayCommand extends BaseCommand {
         try {
             trackResult = await this.getTrack(query);
         } catch (err) {
-            if (err instanceof Error) {
-                await interaction.editReply(err.message).catch(this.logError);
-            }
+            await this.handleError(interaction, err);
             throw err;
         }
 
@@ -135,10 +108,10 @@ export class PlayCommand extends BaseCommand {
         try {
             await player.play(song, interaction.channel!);
         } catch (err) {
-            await interaction
-                .editReply("Bot is not connected to any voice channel.")
-                .catch(this.logError);
-            throw err;
+            await this.handleError(interaction, err);
+            if (!(err instanceof ValidationError)) {
+                throw err;
+            }
         }
 
         const embed =

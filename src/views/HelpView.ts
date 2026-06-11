@@ -2,8 +2,9 @@ import { Collection, Colors, EmbedBuilder } from "discord.js";
 import fs from "fs";
 import path from "path";
 import { CommandHelpView } from "./CommandHelpView";
+import { env } from "../config";
 
-const MARMUT_ICON_40PX = process.env.MARMUT_ICON_40PX;
+const MARMUT_ICON_40PX = env.ui.marmutIcon40px;
 
 export class HelpView {
     private readonly commandHelpViews: Collection<string, CommandHelpView>;
@@ -18,8 +19,8 @@ export class HelpView {
         return fs.statSync(item).isDirectory();
     }
 
-    private isJavascriptFile(item: string) {
-        return item.endsWith(".js") && fs.statSync(item).isFile();
+    private isSourceFile(item: string) {
+        return (item.endsWith(".js") || item.endsWith(".ts")) && fs.statSync(item).isFile();
     }
 
     private createFields() {
@@ -27,7 +28,7 @@ export class HelpView {
         const categoriesArray = fs
             .readdirSync(categoriesPath)
             .filter((item) =>
-                this.isDirectory(path.join(categoriesPath, item))
+                this.isDirectory(path.join(categoriesPath, item)),
             );
 
         const categories = new Collection<string, string[]>();
@@ -37,7 +38,7 @@ export class HelpView {
             const commandNames = fs
                 .readdirSync(commandHelpViewsPath)
                 .map((item) => path.join(commandHelpViewsPath, item))
-                .filter(this.isJavascriptFile)
+                .filter(this.isSourceFile)
                 .map((commandHelpViewPath) => {
                     const importedObject = require(commandHelpViewPath);
                     const commandHelpView =
@@ -78,7 +79,7 @@ export class HelpView {
         const categories = fs
             .readdirSync(categoriesPath)
             .filter((item) =>
-                this.isDirectory(path.join(categoriesPath, item))
+                this.isDirectory(path.join(categoriesPath, item)),
             );
 
         const commandHelpViewsArray: CommandHelpView[] = categories
@@ -86,7 +87,7 @@ export class HelpView {
                 fs
                     .readdirSync(path.join(categoriesPath, category))
                     .map((item) => path.join(categoriesPath, category, item))
-                    .filter(this.isJavascriptFile)
+                    .filter(this.isSourceFile),
             )
             .flat()
             .map((commandHelpViewPath) => {
@@ -96,7 +97,7 @@ export class HelpView {
 
         return commandHelpViewsArray.reduce(
             (acc, view) => acc.set(view.commandName, view),
-            new Collection<string, CommandHelpView>()
+            new Collection<string, CommandHelpView>(),
         );
     }
 

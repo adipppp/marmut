@@ -3,24 +3,21 @@ import {
     SharedSlashCommand,
     SlashCommandBuilder,
 } from "discord.js";
-import { Command } from "../../types";
+import { BaseCommand } from "../BaseCommand";
+import { COOLDOWNS } from "../../config";
 
-export class PingCommand implements Command {
-    readonly cooldown: number;
+export class PingCommand extends BaseCommand {
+    readonly cooldown = COOLDOWNS.SLOW;
     readonly data: SharedSlashCommand;
 
     constructor() {
-        this.cooldown = 2;
+        super();
         this.data = new SlashCommandBuilder()
             .setName("ping")
             .setDescription("Replies with Pong!");
     }
 
-    async run(interaction: ChatInputCommandInteraction) {
-        try {
-            await interaction.reply("Pong!");
-        } catch (err) {
-            throw err;
-        }
+    async run(interaction: ChatInputCommandInteraction): Promise<void> {
+        await interaction.reply("Pong!");
     }
 }
