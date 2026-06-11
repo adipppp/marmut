@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { Command } from "../../types";
 import { env } from "../../config";
+import { getLavalinkClient } from "./LavalinkClient";
 
 export class MarmutClient extends Client {
     readonly commands: Collection<string, Command>;
@@ -19,14 +20,16 @@ export class MarmutClient extends Client {
             .filter((file) => file.endsWith(".js") || file.endsWith(".ts"));
 
         for (const file of listenerFiles) {
-            const module = await import(path.join(listenersPath, file));
-            const listenerClass = Object.values(module).find(
-                (val) => typeof val === "function" && val.prototype?.listen,
-            ) as (new (client: MarmutClient) => any) | undefined;
+            try {
+                const module = await import(path.join(listenersPath, file));
+                const listenerClass = module.default;
 
-            if (listenerClass) {
-                const listener = new listenerClass(this);
-                listener.listen();
+                if (typeof listenerClass === "function" && listenerClass.prototype?.listen) {
+                    const listener = new listenerClass(this);
+                    listener.listen();
+                }
+            } catch (err) {
+                console.error(`[Listener Loader] Failed to load listener ${file}:`, err);
             }
         }
 
@@ -48,7 +51,14 @@ export class MarmutClient extends Client {
             route = Routes.applicationCommands(env.discord.clientId);
         }
 
-        await rest.put(route, { body: commandsArray });
+        try {
+            await rest.put(route, { body: commandsArray });
+        } catch (err) {
+            console.error(
+                "[Command Registry] Failed to synchronize slash commands with Discord:",
+                err,
+            );
+        }
     }
 
     async loadCommands() {
@@ -66,20 +76,25 @@ export class MarmutClient extends Client {
                 .filter((file) => file.endsWith(".js") || file.endsWith(".ts"));
 
             for (const file of commandFiles) {
-                const commandModule = await import(path.join(folderPath, file));
-                const commandClass = Object.values(commandModule).find(
-                    (value) =>
-                        typeof value === "function" &&
-                        value.prototype !== undefined &&
-                        typeof value.prototype.run === "function",
-                ) as (new () => Command) | undefined;
+                try {
+                    const commandModule = await import(path.join(folderPath, file));
+                    const commandClass = commandModule.default;
 
-                if (!commandClass) {
-                    continue;
+                    if (typeof commandClass !== "function" || !commandClass.prototype?.run) {
+                        continue;
+                    }
+
+                    const instance = new commandClass();
+                    if (!instance.data?.name) {
+                        console.warn(
+                            `[Command Loader] Skipping invalid command in ${file}: Missing name.`,
+                        );
+                        continue;
+                    }
+                    this.commands.set(instance.data.name, instance);
+                } catch (err) {
+                    console.error(`[Command Loader] Failed to load command ${file}:`, err);
                 }
-
-                const instance = new commandClass();
-                this.commands.set(instance.data.name, instance);
             }
         }
     }
@@ -91,18 +106,35 @@ export class MarmutClient extends Client {
         }
         await this.registerListeners();
 
-        const destroy = this.destroy.bind(this);
-        process.on("beforeExit", destroy);
-        process.on("SIGINT", destroy);
+        const destroy = async () => {
+            try {
+                const lavalinkClient = getLavalinkClient();
+                lavalinkClient.disconnectAll();
+            } catch (e) {
+                console.error("Failed to disconnect Lavalink nodes:", e);
+            }
+            try {
+                await this.destroy();
+            } catch (e) {
+                console.error("Failed to destroy Discord client:", e);
+            }
+        };
+
+        process.on("SIGINT", async () => {
+            await destroy();
+            process.exit(0);
+        });
+        process.on("SIGTERM", async () => {
+            await destroy();
+            process.exit(0);
+        });
         process.on("uncaughtException", async (err) => {
             console.error(err);
             await destroy();
             process.exit(1);
         });
         process.on("unhandledRejection", async (err) => {
-            console.error(err);
-            await destroy();
-            process.exit(1);
+            console.error("Unhandled Rejection:", err);
         });
 
         return super.login(token);

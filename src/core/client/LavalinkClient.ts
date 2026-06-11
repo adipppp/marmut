@@ -17,6 +17,10 @@ export class LavalinkClient extends Shoukaku {
         });
     }
 
+    public disconnectAll(): void {
+        this.nodes.forEach((node) => node.disconnect(1000));
+    }
+
     async login(token: string): Promise<string> {
         return await this._marmutClient.login(token);
     }
