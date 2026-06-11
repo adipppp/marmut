@@ -1,0 +1,17 @@
+*.yml
+*.yaml
+.env
+.env.*
+.github
+node_modules
+build
+dist
+package.json
+package-lock.json
+pnpm-lock.yaml
+README.md
+README.Docker.md
+tsconfig.json
+yarn.lock
+babel.config.js
+jest.config.ts
