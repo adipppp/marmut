@@ -9,7 +9,8 @@
     "dev": "node dist/index.js",
     "prod": "node dist/index.js",
     "start": "pnpm clean && pnpm build && pnpm dev",
-    "test": "jest --passWithNoTests"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "repository": {
     "type": "git",
@@ -32,18 +33,14 @@
     "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
-    "@babel/core": "^7.28.5",
-    "@babel/preset-env": "^7.28.5",
-    "@babel/preset-typescript": "^7.28.5",
-    "@types/jest": "^30.0.0",
     "@types/node": "^24.12.0",
     "@types/tough-cookie": "^4.0.5",
-    "babel-jest": "^30.2.0",
-    "jest": "^30.2.0",
+    "@vitest/coverage-v8": "^4.1.8",
     "prettier": "^3.6.2",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.8"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
