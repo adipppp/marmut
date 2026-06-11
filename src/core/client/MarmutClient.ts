@@ -1,18 +1,8 @@
-import {
-    Client,
-    ClientOptions,
-    Collection,
-    GatewayIntentBits,
-    REST,
-    Routes,
-} from "discord.js";
+import { Client, ClientOptions, Collection, REST, Routes } from "discord.js";
 import fs from "fs";
 import path from "path";
 import { Command } from "../../types";
-
-const TOKEN = process.env.DISCORD_TOKEN;
-const CLIENT_ID = process.env.CLIENT_ID;
-const GUILD_ID = process.env.GUILD_ID;
+import { env } from "../../config";
 
 export class MarmutClient extends Client {
     readonly commands: Collection<string, Command>;
@@ -23,45 +13,46 @@ export class MarmutClient extends Client {
     }
 
     private async registerListeners() {
-        const listenersPath = path.join(process.cwd(), "dist", "listeners");
+        const listenersPath = path.join(__dirname, "..", "..", "listeners");
         const listenerFiles = fs
             .readdirSync(listenersPath)
-            .filter((file) => file.endsWith(".js"));
+            .filter((file) => file.endsWith(".js") || file.endsWith(".ts"));
 
         for (const file of listenerFiles) {
-            const listenerClass = await import(path.join(listenersPath, file));
-            const listener = new listenerClass[Object.keys(listenerClass)[0]](this);
-            listener.listen();
+            const module = await import(path.join(listenersPath, file));
+            const listenerClass = Object.values(module).find(
+                (val) => typeof val === "function" && val.prototype?.listen,
+            ) as (new (client: MarmutClient) => any) | undefined;
+
+            if (listenerClass) {
+                const listener = new listenerClass(this);
+                listener.listen();
+            }
         }
 
         this.on("error", console.error);
-        this.on("debug", console.debug);
     }
 
-    private async registerCommands() {
-        if (!TOKEN) {
-            throw new Error("DISCORD_TOKEN environment variable is undefined");
-        }
-        if (!CLIENT_ID) {
-            throw new Error("CLIENT_ID environment variable is undefined");
-        }
-
+    private async registerCommands(): Promise<void> {
         const commandsArray = this.commands.map((value) => value.data.toJSON());
-        const rest = new REST().setToken(TOKEN);
+        const rest = new REST().setToken(env.discord.token);
 
         let route;
 
-        if (GUILD_ID) {
-            route = Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID);
+        if (env.discord.guildId) {
+            route = Routes.applicationGuildCommands(
+                env.discord.clientId,
+                env.discord.guildId,
+            );
         } else {
-            route = Routes.applicationCommands(CLIENT_ID);
+            route = Routes.applicationCommands(env.discord.clientId);
         }
 
         await rest.put(route, { body: commandsArray });
     }
 
     async loadCommands() {
-        const commandsPath = path.join(process.cwd(), "dist", "commands");
+        const commandsPath = path.join(__dirname, "..", "..", "commands");
         const commandFolders = fs.readdirSync(commandsPath);
 
         for (const item of commandFolders) {
@@ -72,13 +63,22 @@ export class MarmutClient extends Client {
 
             const commandFiles = fs
                 .readdirSync(folderPath)
-                .filter((file) => file.endsWith(".js"));
+                .filter((file) => file.endsWith(".js") || file.endsWith(".ts"));
 
             for (const file of commandFiles) {
-                const command = await import(path.join(folderPath, file));
-                const instance: Command = new command[
-                    Object.keys(command)[0]
-                ]();
+                const commandModule = await import(path.join(folderPath, file));
+                const commandClass = Object.values(commandModule).find(
+                    (value) =>
+                        typeof value === "function" &&
+                        value.prototype !== undefined &&
+                        typeof value.prototype.run === "function",
+                ) as (new () => Command) | undefined;
+
+                if (!commandClass) {
+                    continue;
+                }
+
+                const instance = new commandClass();
                 this.commands.set(instance.data.name, instance);
             }
         }
@@ -86,7 +86,9 @@ export class MarmutClient extends Client {
 
     async login(token: string) {
         await this.loadCommands();
-        // await this.registerCommands();
+        if (env.discord.autoRegisterCommands) {
+            await this.registerCommands();
+        }
         await this.registerListeners();
 
         const destroy = this.destroy.bind(this);
@@ -106,23 +108,3 @@ export class MarmutClient extends Client {
         return super.login(token);
     }
 }
-
-export const marmut = new MarmutClient({
-    intents: [
-        GatewayIntentBits.GuildVoiceStates,
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMessageReactions,
-        GatewayIntentBits.GuildPresences,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildScheduledEvents,
-        GatewayIntentBits.GuildIntegrations,
-        GatewayIntentBits.GuildWebhooks,
-        GatewayIntentBits.GuildInvites,
-        GatewayIntentBits.GuildMessageTyping,
-        GatewayIntentBits.GuildMessagePolls,
-        GatewayIntentBits.GuildExpressions,
-        GatewayIntentBits.GuildModeration,
-    ],
-});

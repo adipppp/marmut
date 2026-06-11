@@ -1,31 +1,43 @@
-import { Connectors, Shoukaku } from "shoukaku";
-import { marmut } from "./MarmutClient";
+import { Connectors, NodeOption, Shoukaku } from "shoukaku";
+import { Client } from "discord.js";
+import { MarmutClient } from "./MarmutClient";
 
-const nodeName = process.env.LAVALINK_NODE_NAME;
-const nodeUrl = process.env.LAVALINK_NODE_URL;
-const nodeAuth = process.env.LAVALINK_NODE_AUTH;
-const nodeIsSecure =
-    process.env.LAVALINK_NODE_IS_SECURE?.toLowerCase() === "true";
+export class LavalinkClient extends Shoukaku {
+    private static _instance?: LavalinkClient;
+    private readonly _marmutClient: MarmutClient;
 
-if (nodeName === undefined) {
-    throw new Error("LAVALINK_NODE_NAME environment variable is undefined.");
+    constructor(client: MarmutClient, nodes: NodeOption[]) {
+        super(new Connectors.DiscordJS(client), nodes);
+
+        LavalinkClient._instance = this;
+        this._marmutClient = client;
+
+        this.on("error", (_, err) => {
+            console.error(err);
+        });
+    }
+
+    async login(token: string): Promise<string> {
+        return await this._marmutClient.login(token);
+    }
+
+    static get instance(): LavalinkClient {
+        if (LavalinkClient._instance === undefined) {
+            throw new Error("LavalinkClient has not been initialized yet");
+        }
+        return LavalinkClient._instance;
+    }
+
+    get marmutClient(): MarmutClient {
+        return this._marmutClient;
+    }
 }
-if (nodeUrl === undefined) {
-    throw new Error("LAVALINK_NODE_URL environment variable is undefined.");
+
+// Convenience getters for accessing singletons
+export function getLavalinkClient(): LavalinkClient {
+    return LavalinkClient.instance;
 }
-if (nodeAuth === undefined) {
-    throw new Error("LAVALINK_NODE_AUTH environment variable is undefined.");
+
+export function getMarmutClient(): MarmutClient {
+    return LavalinkClient.instance.marmutClient;
 }
-
-const nodes = [
-    { name: nodeName, url: nodeUrl, auth: nodeAuth, secure: nodeIsSecure },
-];
-
-export const lavalinkClient = new Shoukaku(
-    new Connectors.DiscordJS(marmut),
-    nodes
-);
-
-lavalinkClient.on("error", (name, error) => {
-    console.error(error);
-});

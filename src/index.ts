@@ -1,16 +1,39 @@
-import "dotenv/config";
-import { lavalinkClient, marmut } from "./core/client";
+import { env } from "./config";
+import { LavalinkClient, MarmutClient } from "./core/client";
+import { GatewayIntentBits } from "discord.js";
 
 async function main() {
-    const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+    const client = new MarmutClient({
+        intents: [
+            GatewayIntentBits.GuildVoiceStates,
+            GatewayIntentBits.Guilds,
+            GatewayIntentBits.GuildMessages,
+            GatewayIntentBits.MessageContent,
+            GatewayIntentBits.GuildMessageReactions,
+            GatewayIntentBits.GuildPresences,
+            GatewayIntentBits.GuildMembers,
+            GatewayIntentBits.GuildScheduledEvents,
+            GatewayIntentBits.GuildIntegrations,
+            GatewayIntentBits.GuildWebhooks,
+            GatewayIntentBits.GuildInvites,
+            GatewayIntentBits.GuildMessageTyping,
+            GatewayIntentBits.GuildMessagePolls,
+            GatewayIntentBits.GuildExpressions,
+            GatewayIntentBits.GuildModeration,
+        ],
+    });
 
-    if (!DISCORD_TOKEN) {
-        throw new Error("DISCORD_TOKEN environment variable is undefined");
-    }
+    const nodes = [
+        {
+            name: env.lavalink.nodeName,
+            url: env.lavalink.nodeUrl,
+            auth: env.lavalink.nodeAuth,
+            secure: env.lavalink.isSecure,
+        },
+    ];
+    const lavalinkClient = new LavalinkClient(client, nodes);
 
-    lavalinkClient;
-
-    await marmut.login(DISCORD_TOKEN);
+    await lavalinkClient.login(env.discord.token);
 }
 
 main();
