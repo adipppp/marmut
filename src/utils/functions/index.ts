@@ -3,6 +3,7 @@ export * from "./clientInVoiceChannelOf";
 export * from "./clientIsPlayingIn";
 export * from "./createAddedToQueueEmbed";
 export * from "./createNowPlayingEmbed";
+export * from "./formatTime";
 export * from "./getSearchResults";
 export * from "./getVideoId";
 export * from "./inVoiceChannel";

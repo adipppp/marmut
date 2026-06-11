@@ -1,18 +1,31 @@
 import { VoiceBasedChannel } from "discord.js";
 import { musicPlayers } from "../../core/managers";
 import { MusicPlayer } from "../../core/music";
-import { lavalinkClient } from "../../core/client";
+import { getLavalinkClient } from "../../core/client";
 
-export async function joinVoiceChannel(channel: VoiceBasedChannel) {
+export async function joinVoiceChannel(
+    channel: VoiceBasedChannel,
+): Promise<void> {
+    const lavalinkClient = getLavalinkClient();
     const guild = channel.guild;
     const guildId = guild.id;
     const channelId = channel.id;
+
+    const existingMusicPlayer = musicPlayers.get(guildId);
+    
+    if (existingMusicPlayer && guild.members.me?.voice.channelId === channelId) {
+        return;
+    }
+
     const player = await lavalinkClient.joinVoiceChannel({
         guildId,
         channelId,
-        shardId: 0,
+        shardId: guild.shardId,
         deaf: true,
     });
-    const musicPlayer = new MusicPlayer(guildId, player);
-    musicPlayers.set(guildId, musicPlayer);
+
+    if (!existingMusicPlayer) {
+        const musicPlayer = new MusicPlayer(guildId, player);
+        musicPlayers.set(guildId, musicPlayer);
+    }
 }

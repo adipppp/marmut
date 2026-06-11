@@ -1,9 +1,10 @@
 import { getVideoId } from "./getVideoId";
-import { lavalinkClient } from "../../core/client";
+import { getLavalinkClient } from "../../core/client";
 import { LavalinkErrorCode } from "../../enums";
 import { LavalinkError } from "../../errors";
 
 export async function getSearchResults(query: string) {
+    const lavalinkClient = getLavalinkClient();
     const node = lavalinkClient.options.nodeResolver(lavalinkClient.nodes);
     if (node === undefined) {
         throw new LavalinkError({
@@ -13,7 +14,7 @@ export async function getSearchResults(query: string) {
     let identifier;
     const videoId = getVideoId(query);
     if (videoId !== null) {
-        identifier = videoId;
+        identifier = `https://www.youtube.com/watch?v=${videoId}`;
     } else {
         identifier = `ytsearch:${query}`;
     }
