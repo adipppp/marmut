@@ -18,7 +18,7 @@ export class InteractionCreateListener implements ClientEventListener {
         const commandName = interaction.commandName!;
         const userId = interaction.user.id;
         const guildId = interaction.guildId!;
-        const compositeId = BigInt(userId) ^ BigInt(guildId);
+        const compositeId = `${userId}-${guildId}`;
 
         const commands = this.marmutClient.commands;
 
@@ -29,7 +29,7 @@ export class InteractionCreateListener implements ClientEventListener {
         return command.cooldown - (Date.now() - cooldownStart) / 1000;
     }
 
-    private setCooldown(commandName: string, compositeId: bigint) {
+    private setCooldown(commandName: string, compositeId: string) {
         let commandNames = cooldowns.get(compositeId);
         if (!commandNames) {
             commandNames = new Collection();
@@ -38,14 +38,14 @@ export class InteractionCreateListener implements ClientEventListener {
         return commandNames.set(commandName, Date.now());
     }
 
-    private deleteCooldown(commandName: string, compositeId: bigint) {
+    private deleteCooldown(commandName: string, compositeId: string) {
         const commandNames = cooldowns.get(compositeId)!;
         return commandNames.delete(commandName);
     }
 
     private async deleteCooldownOnTimeout(
         commandName: string,
-        compositeId: bigint
+        compositeId: string,
     ) {
         const commands = this.marmutClient.commands;
 
@@ -55,12 +55,12 @@ export class InteractionCreateListener implements ClientEventListener {
         return await new Promise<boolean>((resolve) =>
             setTimeout(
                 () => resolve(this.deleteCooldown(commandName, compositeId)),
-                cooldownDuration * 1000
-            )
+                cooldownDuration * 1000,
+            ),
         );
     }
 
-    private isOnCooldown(commandName: string, compositeId: bigint) {
+    private isOnCooldown(commandName: string, compositeId: string) {
         const commandNames = cooldowns.get(compositeId);
         return commandNames !== undefined && commandNames.has(commandName);
     }
@@ -71,7 +71,7 @@ export class InteractionCreateListener implements ClientEventListener {
         const commandName = interaction.commandName;
         const userId = interaction.user.id;
         const guildId = interaction.guildId!;
-        const compositeId = BigInt(userId) ^ BigInt(guildId);
+        const compositeId = `${userId}-${guildId}`;
 
         if (this.isOnCooldown(commandName, compositeId)) {
             const remainingDuration = this.getRemainingDuration(interaction);
@@ -102,7 +102,7 @@ export class InteractionCreateListener implements ClientEventListener {
 
     listen() {
         this.marmutClient.on("interactionCreate", (interaction) =>
-            this.handleEvent(interaction).catch(console.error)
+            this.handleEvent(interaction).catch(console.error),
         );
     }
 }
