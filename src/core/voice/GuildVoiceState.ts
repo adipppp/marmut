@@ -59,9 +59,9 @@ export class GuildVoiceState {
                     await leaveVoiceChannel(guildId);
                 } catch (err) {
                     console.error(err);
-                    return;
+                } finally {
+                    this.timeout = null;
                 }
-                this.cancelAutoDisconnectTimer();
             }, TIMEOUTS.AUTO_DISCONNECT_MS);
         }
     }

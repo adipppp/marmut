@@ -5,7 +5,7 @@ import { guildVoiceStateManager } from "../managers";
 import { MUSIC_PLAYER, env } from "../../config";
 import { RepeatMode, MusicPlayerErrorCode } from "../../enums";
 import { MusicPlayerError } from "../../errors";
-import { createNowPlayingEmbed, getVideoId } from "../../utils/functions";
+import { createNowPlayingEmbed } from "../../utils/functions";
 import { Song } from "./Song";
 
 const { DEFAULT_VOLUME, MS_PER_SECOND } = MUSIC_PLAYER;
@@ -140,14 +140,7 @@ export class MusicPlayer {
 
     private async playSong(song: Song): Promise<void> {
         const player = this.getPlayer();
-        const videoId = getVideoId(song.videoUrl);
-        if (videoId === null) {
-            throw new MusicPlayerError({
-                code: MusicPlayerErrorCode.INVALID_VIDEO_URL,
-            });
-        }
-
-        await player.playTrack({ track: { identifier: videoId } });
+        await player.playTrack({ track: { encoded: song.encoded } });
     }
 
     isPlaying(): boolean {

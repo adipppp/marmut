@@ -5,11 +5,13 @@ export class Song {
     thumbnailUrl: string;
     videoUrl: string;
     duration: bigint;
+    encoded: string;
 
     constructor(data: SongData) {
         this.title = data.title;
         this.thumbnailUrl = data.thumbnailUrl;
         this.videoUrl = data.videoUrl;
         this.duration = data.duration;
+        this.encoded = data.encoded;
     }
 }
