@@ -1,30 +1,41 @@
-# Marmut
+# Marmut 🐹🎧
+Mari Mutar Musik
 
-Marmut is a Discord music bot powered by Lavalink and Shoukaku.
-
-## Requirements
-
-- Node.js 22+
-- pnpm
-- A running Lavalink node
+## Prerequisites
+- Node.js 20+
+- Pnpm
+- Lavalink Server
 
 ## Setup
+```bash
+pnpm install
+```
 
-1. Install dependencies:
+## Environment Variables
+Copy `.env.example` to `.env` and fill in the required values:
+- `DISCORD_TOKEN`: Your Discord bot token.
+- `CLIENT_ID`: Your Discord bot client ID.
+- `GUILD_ID`: (Optional) Your Discord server ID.
+- `LAVALINK_NODE_NAME`: Name for Lavalink node.
+- `LAVALINK_NODE_URL`: Lavalink node URL (e.g., localhost:2333).
+- `LAVALINK_NODE_AUTH`: Lavalink node password.
+- `LAVALINK_NODE_IS_SECURE`: `true` if Lavalink uses HTTPS/WSS.
+- `AUTO_REGISTER_COMMANDS`: Set to `false` to disable automatic slash command registration.
 
-   `pnpm install`
+## Deployment
+### Native
+```bash
+pnpm build
+pnpm start
+```
 
-2. Configure `.env` with your Discord and Lavalink settings.
+### Docker
+```bash
+docker build -t marmut .
+docker run -d --env-file .env marmut
+```
 
-3. Build the bot:
-
-   `pnpm build`
-
-4. Run it:
-
-   `pnpm prod`
-
-## Development
-
-- `pnpm build`
-- `pnpm test`
+## Testing
+```bash
+pnpm test
+```
