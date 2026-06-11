@@ -1,37 +1,31 @@
 ARG NODE_VERSION=22.12.0
+ARG NODE_IMAGE=public.ecr.aws/docker/library/node
 
-FROM node:${NODE_VERSION} AS base
+FROM ${NODE_IMAGE}:${NODE_VERSION} AS base
 
 WORKDIR /usr/src/app
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+RUN npm install -g pnpm@10.32.1
 
 FROM base AS deps
 
-RUN --mount=type=bind,source=package.json,target=package.json \
-    --mount=type=bind,source=pnpm-lock.yaml,target=pnpm-lock.yaml \
-    --mount=type=cache,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
-
-RUN --mount=type=bind,source=package.json,target=package.json \
-    --mount=type=bind,source=pnpm-lock.yaml,target=pnpm-lock.yaml \
-    --mount=type=cache,target=/pnpm/store \
-    pnpm install --frozen-lockfile
 
 COPY . .
 
 RUN pnpm build
+RUN pnpm prune --prod
 
 FROM base AS final
 
-ENV NODE_ENV production
-USER node
+ENV NODE_ENV=production
 
 COPY package.json .
-COPY --from=deps /usr/src/app/node_modules ./node_modules
-COPY --from=build /usr/src/app/dist ./dist
+COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
+COPY --chown=node:node --from=build /usr/src/app/dist ./dist
 
-CMD pnpm prod
+USER node
+
+CMD ["pnpm", "prod"]
