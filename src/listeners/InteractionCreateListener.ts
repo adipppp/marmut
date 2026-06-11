@@ -7,7 +7,7 @@ import { MarmutClient } from "../core/client";
 import { cooldowns } from "../core/managers";
 import { ClientEventListener } from "../types";
 
-export class InteractionCreateListener implements ClientEventListener {
+export default class InteractionCreateListener implements ClientEventListener {
     private readonly marmutClient: MarmutClient;
 
     constructor(marmutClient: MarmutClient) {

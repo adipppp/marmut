@@ -1,7 +1,7 @@
 import { Client } from "discord.js";
 import { ClientEventListener } from "../types";
 
-export class ClientReadyListener implements ClientEventListener {
+export default class ClientReadyListener implements ClientEventListener {
     private readonly client: Client;
 
     constructor(client: Client) {

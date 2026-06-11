@@ -6,7 +6,7 @@ import {
 import { BaseCommand } from "../BaseCommand";
 import { COOLDOWNS } from "../../config";
 
-export class PingCommand extends BaseCommand {
+export default class PingCommand extends BaseCommand {
     readonly cooldown = COOLDOWNS.SLOW;
     readonly data: SharedSlashCommand;
 

@@ -8,7 +8,7 @@ import { BaseCommand } from "../BaseCommand";
 import { COOLDOWNS } from "../../config";
 import { helpView } from "../../views";
 
-export class HelpCommand extends BaseCommand {
+export default class HelpCommand extends BaseCommand {
     readonly cooldown = COOLDOWNS.SLOW;
     readonly data: SharedSlashCommand;
 

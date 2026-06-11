@@ -17,7 +17,7 @@ import {
     getMusicCommandContext,
 } from "./context";
 
-export class SkipCommand extends BaseCommand {
+export default class SkipCommand extends BaseCommand {
     readonly cooldown = COOLDOWNS.FAST;
     readonly data: SharedSlashCommand;
 

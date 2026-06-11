@@ -14,7 +14,7 @@ import {
 import { leaveVoiceChannel } from "../../utils/functions";
 import { getMusicCommandContext } from "./context";
 
-export class LeaveCommand extends BaseCommand {
+export default class LeaveCommand extends BaseCommand {
     readonly cooldown = COOLDOWNS.SLOW;
     readonly data: SharedSlashCommand;
 

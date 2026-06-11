@@ -17,7 +17,7 @@ import {
 } from "../../utils/functions";
 import { getMusicCommandContext } from "./context";
 
-export class JoinCommand extends BaseCommand {
+export default class JoinCommand extends BaseCommand {
     readonly cooldown = COOLDOWNS.SLOW;
     readonly data: SharedSlashCommand;
 

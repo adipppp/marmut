@@ -41,8 +41,7 @@ export class HelpView {
                 .filter(this.isSourceFile)
                 .map((commandHelpViewPath) => {
                     const importedObject = require(commandHelpViewPath);
-                    const commandHelpView =
-                        importedObject[Object.keys(importedObject)[0]];
+                    const commandHelpView = importedObject.default;
                     return commandHelpView.commandName;
                 });
 
@@ -92,7 +91,7 @@ export class HelpView {
             .flat()
             .map((commandHelpViewPath) => {
                 const importedObject = require(commandHelpViewPath);
-                return importedObject[Object.keys(importedObject)[0]];
+                return importedObject.default;
             });
 
         return commandHelpViewsArray.reduce(

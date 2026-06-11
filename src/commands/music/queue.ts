@@ -22,7 +22,7 @@ import {
     getMusicCommandContext,
 } from "./context";
 
-export class QueueCommand extends BaseCommand {
+export default class QueueCommand extends BaseCommand {
     readonly cooldown = COOLDOWNS.FAST;
     readonly data: SharedSlashCommand;
 

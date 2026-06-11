@@ -19,7 +19,7 @@ import {
 
 const { MIN_VOLUME, MAX_VOLUME } = MUSIC_PLAYER;
 
-export class VolumeCommand extends BaseCommand {
+export default class VolumeCommand extends BaseCommand {
     readonly cooldown = COOLDOWNS.FAST;
     readonly data: SharedSlashCommand;
 

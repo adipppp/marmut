@@ -7,7 +7,7 @@ import {
     leaveVoiceChannel,
 } from "../utils/functions";
 
-export class VoiceStateUpdateListener implements ClientEventListener {
+export default class VoiceStateUpdateListener implements ClientEventListener {
     private readonly client: Client;
 
     constructor(client: Client) {

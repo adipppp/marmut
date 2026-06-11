@@ -24,7 +24,7 @@ import {
 import { validateVoiceState } from "../../utils/validators";
 import { getGuildMusicPlayer, getMusicCommandContext } from "./context";
 
-export class SearchCommand extends BaseCommand {
+export default class SearchCommand extends BaseCommand {
     readonly cooldown = COOLDOWNS.DEFAULT;
     readonly data: SharedSlashCommand;
 

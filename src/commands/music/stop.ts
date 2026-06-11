@@ -17,7 +17,7 @@ import {
     getMusicCommandContext,
 } from "./context";
 
-export class StopCommand extends BaseCommand {
+export default class StopCommand extends BaseCommand {
     readonly cooldown = COOLDOWNS.FAST;
     readonly data: SharedSlashCommand;
 
