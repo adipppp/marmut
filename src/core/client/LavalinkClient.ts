@@ -12,8 +12,8 @@ export class LavalinkClient extends Shoukaku {
         LavalinkClient._instance = this;
         this._marmutClient = client;
 
-        this.on("error", (_, err) => {
-            console.error(err);
+        this.on("error", (name, err) => {
+            console.error(`[Lavalink] Error on node ${name}:`, err);
         });
     }
 
