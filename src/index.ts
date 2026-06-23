@@ -31,11 +31,11 @@ async function testSonataConnection() {
 
 async function main() {
     // Test connection to Sonata before starting
-    const isSonataReady = await testSonataConnection();
-    if (!isSonataReady) {
-        console.error("[Sonata] Critical: Could not connect to Sonata audio server. Exiting...");
-        process.exit(1);
-    }
+    // const isSonataReady = await testSonataConnection();
+    // if (!isSonataReady) {
+        // console.error("[Sonata] Critical: Could not connect to Sonata audio server. Exiting...");
+        // process.exit(1);
+    // }
 
     const client = new MarmutClient({
         intents: [GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.Guilds],
