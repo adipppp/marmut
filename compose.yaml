@@ -1,33 +1,58 @@
 services:
-  sonata:
+  nodelink:
     build:
       context: .
-      dockerfile: Dockerfile.sonata
+      dockerfile: Dockerfile.nodelink
+    container_name: nodelink-prod
     restart: unless-stopped
+
     ports:
       - "2333:2333"
+
+    # Security Hardening
+    user: "1000:1000"            # Executes process as a safe non-root user
+    read_only: true               # Prevents malicious writes to application core binaries
+    tmpfs:
+      - /tmp                      # Grants explicit, isolated storage access to temp caches
+
+    environment:
+      - NODE_ENV=production
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 256M
+
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:2333/health"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    networks:
-      - marmut-network
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:2333/v4/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Log Rotation Configuration (Avoids out-of-disk space errors)
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   marmut:
     build:
       context: .
     restart: unless-stopped
     depends_on:
-      sonata:
+      nodelink:
         condition: service_healthy
     env_file:
       - path: .env
         required: true
     environment:
-      LAVALINK_NODE_NAME: Docker Sonata
-      LAVALINK_NODE_URL: sonata:2333
+      LAVALINK_NODE_NAME: Lavalink
+      LAVALINK_NODE_URL: nodelink:2333
       LAVALINK_NODE_AUTH: youshallnotpass
       LAVALINK_NODE_IS_SECURE: false
     networks:
