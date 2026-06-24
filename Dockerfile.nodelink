@@ -6,7 +6,9 @@ FROM performanc/nodelink:${NODELINK_VERSION}
 
 ENV NODE_ENV=production
 
-WORKDIR /usr/src/app
+WORKDIR /app
+
+RUN mkdir -p /app/plugins /app/.cache && chown -R 1000:1000 /app/plugins /app/.cache
 
 COPY --chown=1000:1000 config.js ./config.js
 
