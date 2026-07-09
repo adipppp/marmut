@@ -13,9 +13,11 @@ services:
     tmpfs:
       - /tmp                      # Grants explicit, isolated storage access to temp caches
       - /app/.cache:uid=1000,gid=1000 # Allows saving temporary credentials in a read-only environment
+      - /app/plugins:uid=1000,gid=1000
 
     environment:
       - NODELINK_SERVER_PORT=2333
+      - NODELINK_SERVER_HOST=0.0.0.0
       - NODE_OPTIONS="--max-old-space-size=450"
 
     deploy:
