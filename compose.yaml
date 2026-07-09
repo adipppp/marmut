@@ -1,8 +1,6 @@
 services:
   nodelink:
-    build:
-      context: .
-      dockerfile: Dockerfile.nodelink
+    image: performanc/nodelink:latest
     container_name: nodelink-prod
     restart: unless-stopped
 
@@ -17,10 +15,8 @@ services:
       - /app/.cache:uid=1000,gid=1000 # Allows saving temporary credentials in a read-only environment
 
     environment:
-      - NODE_ENV=production
       - NODELINK_SERVER_PORT=2333
-    networks:
-      - marmut-network
+      - NODE_OPTIONS="--max-old-space-size=450"
 
     deploy:
       resources:
@@ -59,9 +55,3 @@ services:
       LAVALINK_NODE_URL: nodelink:2333
       LAVALINK_NODE_AUTH: youshallnotpass
       LAVALINK_NODE_IS_SECURE: false
-    networks:
-      - marmut-network
-
-networks:
-  marmut-network:
-    driver: bridge
