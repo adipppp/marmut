@@ -1,7 +1,7 @@
 import { Colors } from "discord.js";
 
 export const MUSIC_PLAYER = {
-    DEFAULT_VOLUME: 50,
+    DEFAULT_VOLUME: 10,
     MIN_VOLUME: 0,
     MAX_VOLUME: 100,
     MS_PER_SECOND: 1000,

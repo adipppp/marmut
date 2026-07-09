@@ -1,15 +1,31 @@
-# fly.toml app configuration file generated for marmut on 2026-06-11T00:01:27+07:00
+# fly.toml app configuration file generated for marmut on 2026-06-27T23:57:30+07:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
 app = 'marmut'
 primary_region = 'sin'
+kill_signal = 'SIGINT'
+kill_timeout = '5s'
 
 [build]
+  dockerfile = 'Dockerfile'
+
+[env]
+  NODE_ENV = 'production'
+  CLIENT_ID = '1247124651818094644'
+  JOIN_EMOJI = '<:hci_join:1124245208150839346>'
+  LEAVE_EMOJI = '<:hci_leave:1124245212219318372>'
+  ERROR_EMOJI = '<:error:802804769340129330>'
+  MARMUT_ICON_40PX = 'https://cdn.discordapp.com/attachments/1062764295349354526/1273694040604278794/marmut_40px.jpg'
+  LAVALINK_NODE_NAME = 'NodeLink'
+  LAVALINK_NODE_URL = 'marmut-nodelink.internal:2333'
+  LAVALINK_NODE_IS_SECURE = 'false'
+
+[[restart]]
+  policy = 'always'
 
 [[vm]]
-  memory = '1gb'
+  memory = '512mb'
   cpu_kind = 'shared'
   cpus = 1
-  memory_mb = 1024
