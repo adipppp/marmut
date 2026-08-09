@@ -40,10 +40,14 @@ export default class InteractionCreateListener implements ClientEventListener {
 
     private deleteCooldown(commandName: string, compositeId: string) {
         const commandNames = cooldowns.get(compositeId)!;
-        return commandNames.delete(commandName);
+        const deleted = commandNames.delete(commandName);
+        if (commandNames.size === 0) {
+            cooldowns.delete(compositeId);
+        }
+        return deleted;
     }
 
-    private async deleteCooldownOnTimeout(
+    private scheduleCooldownDeletion(
         commandName: string,
         compositeId: string,
     ) {
@@ -52,11 +56,9 @@ export default class InteractionCreateListener implements ClientEventListener {
         const command = commands.get(commandName)!;
         const cooldownDuration = command.cooldown;
 
-        return await new Promise<boolean>((resolve) =>
-            setTimeout(
-                () => resolve(this.deleteCooldown(commandName, compositeId)),
-                cooldownDuration * 1000,
-            ),
+        setTimeout(
+            () => this.deleteCooldown(commandName, compositeId),
+            cooldownDuration * 1000,
         );
     }
 
@@ -89,6 +91,7 @@ export default class InteractionCreateListener implements ClientEventListener {
         const command = commands.get(commandName)!;
 
         this.setCooldown(commandName, compositeId);
+        this.scheduleCooldownDeletion(commandName, compositeId);
 
         try {
             await command.run(interaction);
@@ -96,8 +99,6 @@ export default class InteractionCreateListener implements ClientEventListener {
             this.deleteCooldown(commandName, compositeId);
             throw err;
         }
-
-        await this.deleteCooldownOnTimeout(commandName, compositeId);
     }
 
     listen() {
