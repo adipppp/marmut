@@ -4,7 +4,7 @@ import {
     ButtonStyle,
     EmbedBuilder,
 } from "discord.js";
-import { MusicPlayer } from "../core/music";
+import { MusicPlayer, Song } from "../core/music";
 import { EMBED_COLOR } from "../config";
 import { millisecondsToHHMMSS } from "../utils/functions";
 
@@ -34,6 +34,16 @@ export class QueueView {
             .setStyle(ButtonStyle.Success);
     }
 
+    private async getUpcomingSongs(): Promise<{ song: Song; index: number }[]> {
+        const queue = await this.player.getQueue();
+        const currentSongIndex = this.player.getCurrentIndex();
+        if (currentSongIndex === -1) return [];
+
+        return queue
+            .map((song, index) => ({ song, index }))
+            .slice(currentSongIndex + 1);
+    }
+
     getCurrentPage(): number {
         return this.currentPage;
     }
@@ -43,8 +53,8 @@ export class QueueView {
             throw new Error("Page number must be an integer");
         }
 
-        const queue = await this.player.getQueue();
-        const maxPages = Math.max(1, Math.ceil(queue.length / 5));
+        const upcoming = await this.getUpcomingSongs();
+        const maxPages = Math.max(1, Math.ceil(upcoming.length / 5));
 
         if (page > maxPages) {
             this.currentPage = maxPages;
@@ -59,7 +69,7 @@ export class QueueView {
         }
         this.actionRow.setComponents([]);
 
-        const queue = await this.player.getQueue();
+        const upcoming = await this.getUpcomingSongs();
 
         if (this.currentPage > 1) {
             if (!this.previousButton) {
@@ -67,7 +77,7 @@ export class QueueView {
             }
             this.actionRow.addComponents(this.previousButton);
         }
-        if (this.currentPage < Math.ceil(queue.length / 5)) {
+        if (this.currentPage < Math.ceil(upcoming.length / 5)) {
             if (!this.nextButton) {
                 this.nextButton = this.createNextButton();
             }
@@ -99,21 +109,20 @@ export class QueueView {
             )
             .setThumbnail(currentSong.thumbnailUrl);
 
-        if (queue.length <= 1) return embed;
+        const upcoming = await this.getUpcomingSongs();
+        if (upcoming.length === 0) return embed;
 
         const lowerIndex = (currentPage - 1) * 5;
-        const songsWithIndices = queue
-            .map((song, index) => ({ song, index }))
-            .slice(lowerIndex, lowerIndex + 5)
-            .filter(({ index }) => index !== currentSongIndex);
+        const pageItems = upcoming.slice(lowerIndex, lowerIndex + 5);
 
-        if (songsWithIndices.length === 0) return embed;
+        if (pageItems.length === 0) return embed;
 
         let value = "";
-        for (let i = 0; i < songsWithIndices.length; i++) {
-            const { song, index } = songsWithIndices[i];
-            value += `${index + 1}. [${song.title}](${song.videoUrl})`;
-            if (i < songsWithIndices.length - 1) {
+        for (let i = 0; i < pageItems.length; i++) {
+            const { song } = pageItems[i];
+            const itemNumber = lowerIndex + i + 1;
+            value += `${itemNumber}. [${song.title}](${song.videoUrl})`;
+            if (i < pageItems.length - 1) {
                 value += "\n";
             }
         }
