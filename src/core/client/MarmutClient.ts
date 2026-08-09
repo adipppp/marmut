@@ -13,23 +13,43 @@ export class MarmutClient extends Client {
         this.commands = new Collection();
     }
 
+    private getFilesRecursively(dir: string): string[] {
+        let results: string[] = [];
+        if (!fs.existsSync(dir)) return results;
+        const list = fs.readdirSync(dir);
+        for (const file of list) {
+            const filePath = path.join(dir, file);
+            const stat = fs.statSync(filePath);
+            if (stat && stat.isDirectory()) {
+                results = results.concat(this.getFilesRecursively(filePath));
+            } else if (filePath.endsWith(".js") || filePath.endsWith(".ts")) {
+                results.push(filePath);
+            }
+        }
+        return results;
+    }
+
     private async registerListeners() {
         const listenersPath = path.join(__dirname, "..", "..", "listeners");
-        const listenerFiles = fs
-            .readdirSync(listenersPath)
-            .filter((file) => file.endsWith(".js") || file.endsWith(".ts"));
+        const listenerFiles = this.getFilesRecursively(listenersPath);
 
         for (const file of listenerFiles) {
             try {
-                const module = await import(path.join(listenersPath, file));
+                const module = await import(file);
                 const listenerClass = module.default;
 
-                if (typeof listenerClass === "function" && listenerClass.prototype?.listen) {
+                if (
+                    typeof listenerClass === "function" &&
+                    listenerClass.prototype?.listen
+                ) {
                     const listener = new listenerClass(this);
                     listener.listen();
                 }
             } catch (err) {
-                console.error(`[Listener Loader] Failed to load listener ${file}:`, err);
+                console.error(
+                    `[Listener Loader] Failed to load listener ${file}:`,
+                    err,
+                );
             }
         }
 
@@ -63,38 +83,33 @@ export class MarmutClient extends Client {
 
     async loadCommands() {
         const commandsPath = path.join(__dirname, "..", "..", "commands");
-        const commandFolders = fs.readdirSync(commandsPath);
+        const commandFiles = this.getFilesRecursively(commandsPath);
 
-        for (const item of commandFolders) {
-            const folderPath = path.join(commandsPath, item);
-            const stats = fs.statSync(folderPath);
+        for (const file of commandFiles) {
+            try {
+                const commandModule = await import(file);
+                const commandClass = commandModule.default;
 
-            if (!stats.isDirectory()) continue;
-
-            const commandFiles = fs
-                .readdirSync(folderPath)
-                .filter((file) => file.endsWith(".js") || file.endsWith(".ts"));
-
-            for (const file of commandFiles) {
-                try {
-                    const commandModule = await import(path.join(folderPath, file));
-                    const commandClass = commandModule.default;
-
-                    if (typeof commandClass !== "function" || !commandClass.prototype?.run) {
-                        continue;
-                    }
-
-                    const instance = new commandClass();
-                    if (!instance.data?.name) {
-                        console.warn(
-                            `[Command Loader] Skipping invalid command in ${file}: Missing name.`,
-                        );
-                        continue;
-                    }
-                    this.commands.set(instance.data.name, instance);
-                } catch (err) {
-                    console.error(`[Command Loader] Failed to load command ${file}:`, err);
+                if (
+                    typeof commandClass !== "function" ||
+                    !commandClass.prototype?.run
+                ) {
+                    continue;
                 }
+
+                const instance = new commandClass();
+                if (!instance.data?.name) {
+                    console.warn(
+                        `[Command Loader] Skipping invalid command in ${file}: Missing name.`,
+                    );
+                    continue;
+                }
+                this.commands.set(instance.data.name, instance);
+            } catch (err) {
+                console.error(
+                    `[Command Loader] Failed to load command ${file}:`,
+                    err,
+                );
             }
         }
     }

@@ -10,7 +10,9 @@
     "prod": "node dist/index.js",
     "start": "pnpm clean && pnpm build && pnpm dev",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "list-servers": "node list_servers.js",
+    "leave-servers": "node leave_servers.js"
   },
   "repository": {
     "type": "git",

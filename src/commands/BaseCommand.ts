@@ -18,7 +18,7 @@ export abstract class BaseCommand implements Command {
         message: string,
     ): Promise<void> {
         const options = { content: message, ephemeral: true };
-        if (interaction.deferred) {
+        if (interaction.deferred || interaction.replied) {
             await interaction.editReply(options).catch(this.logError);
         } else {
             await interaction.reply(options).catch(this.logError);
