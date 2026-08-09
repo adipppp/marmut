@@ -15,7 +15,10 @@ export class GuildVoiceState {
         if (this.timeout !== null) {
             return false;
         }
-        const clientId = this.guild.client.user.id;
+        const clientId = this.guild.client.user?.id;
+        if (!clientId) {
+            return false;
+        }
         const voiceState = this.guild.voiceStates.cache.get(clientId);
         if (voiceState === undefined) {
             return false;
@@ -25,7 +28,7 @@ export class GuildVoiceState {
             return false;
         }
         const members = voiceChannel.members;
-        if (members.size > 1) {
+        if (members.filter((m) => !m.user.bot).size > 0) {
             return false;
         }
         return !clientIsPlayingIn(this.guild);
@@ -35,7 +38,10 @@ export class GuildVoiceState {
         if (this.timeout === null) {
             return false;
         }
-        const clientId = this.guild.client.user.id;
+        const clientId = this.guild.client.user?.id;
+        if (!clientId) {
+            return false;
+        }
         const voiceState = this.guild.voiceStates.cache.get(clientId);
         if (voiceState === undefined) {
             return false;
@@ -45,7 +51,7 @@ export class GuildVoiceState {
             return false;
         }
         const members = voiceChannel.members;
-        if (members.size > 1) {
+        if (members.filter((m) => !m.user.bot).size > 0) {
             return true;
         }
         return clientIsPlayingIn(this.guild);
