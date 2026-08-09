@@ -90,4 +90,43 @@ describe('MusicPlayer', () => {
         
         expect(musicPlayer.isPlaying()).toBe(true);
     });
+
+    it('should clear songs when queue naturally ends', async () => {
+        (musicPlayer as any).songs = [
+            new Song({ title: 'A', thumbnailUrl: '', videoUrl: '', duration: 10000n, encoded: 'encA' })
+        ];
+        (musicPlayer as any).currentIndex = 0;
+        
+        await (musicPlayer as any).handlePlayerEnd();
+        
+        expect((musicPlayer as any).currentIndex).toBe(-1);
+        expect((musicPlayer as any).songs.length).toBe(0);
+    });
+
+    it('should truncate history beyond MAX_HISTORY in normal mode', () => {
+        const dummySongs = Array.from({ length: 105 }, (_, i) => 
+            new Song({ title: `S${i}`, thumbnailUrl: '', videoUrl: '', duration: 10000n, encoded: `enc${i}` })
+        );
+        (musicPlayer as any).songs = dummySongs;
+        (musicPlayer as any).currentIndex = 102; // exceeds 100
+        
+        (musicPlayer as any).cleanupHistory();
+        
+        expect((musicPlayer as any).songs.length).toBe(103); // deleted 2 songs (102 - 100)
+        expect((musicPlayer as any).currentIndex).toBe(100);
+    });
+
+    it('should NOT truncate history when RepeatMode is Queue', () => {
+        const dummySongs = Array.from({ length: 105 }, (_, i) => 
+            new Song({ title: `S${i}`, thumbnailUrl: '', videoUrl: '', duration: 10000n, encoded: `enc${i}` })
+        );
+        (musicPlayer as any).songs = dummySongs;
+        (musicPlayer as any).currentIndex = 102;
+        musicPlayer.setRepeatMode(RepeatMode.Queue);
+        
+        (musicPlayer as any).cleanupHistory();
+        
+        expect((musicPlayer as any).songs.length).toBe(105);
+        expect((musicPlayer as any).currentIndex).toBe(102);
+    });
 });

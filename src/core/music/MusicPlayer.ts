@@ -76,9 +76,12 @@ export class MusicPlayer {
 
         if (this.currentIndex >= this.songs.length) {
             this.currentIndex = -1;
+            this.clearSongs();
             this.handleGuildVoiceState();
             return;
         }
+
+        this.cleanupHistory();
 
         const nextSong = this.songs[this.currentIndex];
         await this.playSong(nextSong);
@@ -96,6 +99,17 @@ export class MusicPlayer {
 
         const embed = createNowPlayingEmbed(nextSong);
         await textChannel.send({ embeds: [embed] }).catch(console.error);
+    }
+
+    private cleanupHistory(): void {
+        if (this.repeatMode === RepeatMode.Queue) return;
+
+        const MAX_HISTORY = 100;
+        if (this.currentIndex > MAX_HISTORY) {
+            const deleteCount = this.currentIndex - MAX_HISTORY;
+            this.songs.splice(0, deleteCount);
+            this.currentIndex -= deleteCount;
+        }
     }
 
     private createErrorEmbed(): EmbedBuilder {
@@ -158,12 +172,11 @@ export class MusicPlayer {
             return;
         }
 
-        this.currentIndex = 0;
+        this.currentIndex = this.songs.length - 1;
         try {
             await this.playSong(song);
         } catch (err) {
             console.error(err);
-            this.handleError(err).catch(console.error);
             this.songs.pop();
             this.currentIndex = -1;
             throw err;
