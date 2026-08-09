@@ -15,6 +15,19 @@ export class LavalinkClient extends Shoukaku {
         this.on("error", (name, err) => {
             console.error(`[Lavalink] Error on node ${name}:`, err);
         });
+        this.on("close", (name, code, reason) => {
+            console.warn(
+                `[Lavalink] Node ${name} closed with code ${code}: ${reason}`,
+            );
+        });
+        this.on("disconnect", (name, count) => {
+            console.warn(
+                `[Lavalink] Node ${name} disconnected. Player count: ${count}`,
+            );
+        });
+        this.on("ready", (name) => {
+            console.log(`[Lavalink] Node ${name} is ready!`);
+        });
     }
 
     public disconnectAll(): void {

@@ -38,7 +38,7 @@ export class HelpView {
             const commandNames = fs
                 .readdirSync(commandHelpViewsPath)
                 .map((item) => path.join(commandHelpViewsPath, item))
-                .filter(this.isSourceFile)
+                .filter((item) => this.isSourceFile(item))
                 .map((commandHelpViewPath) => {
                     const importedObject = require(commandHelpViewPath);
                     const commandHelpView = importedObject.default;
@@ -86,7 +86,7 @@ export class HelpView {
                 fs
                     .readdirSync(path.join(categoriesPath, category))
                     .map((item) => path.join(categoriesPath, category, item))
-                    .filter(this.isSourceFile),
+                    .filter((item) => this.isSourceFile(item)),
             )
             .flat()
             .map((commandHelpViewPath) => {
