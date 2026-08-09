@@ -174,7 +174,7 @@ export default class SearchCommand extends BaseCommand {
                         requireJoinableChannel: true,
                     });
 
-                    collector.stop();
+                    collector.stop("selected");
 
                     rows.forEach((row) =>
                         row.components.forEach((button) =>
@@ -195,7 +195,8 @@ export default class SearchCommand extends BaseCommand {
             },
         );
 
-        collector.on("end", async () => {
+        collector.on("end", async (_collected, reason) => {
+            if (reason === "selected") return;
             rows.forEach((row) =>
                 row.components.forEach((button) => button.setDisabled(true)),
             );
