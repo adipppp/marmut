@@ -32,7 +32,10 @@ export function validateVoiceState(
         requireJoinableChannel = false,
     } = options;
 
-    const guild = interaction.guild!;
+    const guild = interaction.guild;
+    if (!guild) {
+        throw new Error("This interaction can only be used in a server.");
+    }
     const member = interaction.member as GuildMember;
 
     if (requireMemberInVoice && !inVoiceChannel(member)) {
