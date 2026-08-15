@@ -15,16 +15,20 @@ export default class InteractionCreateListener implements ClientEventListener {
     }
 
     private getRemainingDuration(interaction: ChatInputCommandInteraction) {
-        const commandName = interaction.commandName!;
+        const commandName = interaction.commandName;
         const userId = interaction.user.id;
-        const guildId = interaction.guildId!;
+        const guildId = interaction.guildId;
+        if (!guildId) return 0;
         const compositeId = `${userId}-${guildId}`;
 
         const commands = this.marmutClient.commands;
 
-        const command = commands.get(commandName)!;
-        const commandNames = cooldowns.get(compositeId)!;
-        const cooldownStart = commandNames.get(commandName)!;
+        const command = commands.get(commandName);
+        if (!command) return 0;
+        const commandNames = cooldowns.get(compositeId);
+        if (!commandNames) return 0;
+        const cooldownStart = commandNames.get(commandName);
+        if (cooldownStart === undefined) return 0;
 
         return command.cooldown - (Date.now() - cooldownStart) / 1000;
     }
@@ -39,7 +43,8 @@ export default class InteractionCreateListener implements ClientEventListener {
     }
 
     private deleteCooldown(commandName: string, compositeId: string) {
-        const commandNames = cooldowns.get(compositeId)!;
+        const commandNames = cooldowns.get(compositeId);
+        if (!commandNames) return false;
         const deleted = commandNames.delete(commandName);
         if (commandNames.size === 0) {
             cooldowns.delete(compositeId);
@@ -53,7 +58,8 @@ export default class InteractionCreateListener implements ClientEventListener {
     ) {
         const commands = this.marmutClient.commands;
 
-        const command = commands.get(commandName)!;
+        const command = commands.get(commandName);
+        if (!command) return;
         const cooldownDuration = command.cooldown;
 
         setTimeout(
@@ -72,7 +78,8 @@ export default class InteractionCreateListener implements ClientEventListener {
 
         const commandName = interaction.commandName;
         const userId = interaction.user.id;
-        const guildId = interaction.guildId!;
+        const guildId = interaction.guildId;
+        if (!guildId) return;
         const compositeId = `${userId}-${guildId}`;
 
         if (this.isOnCooldown(commandName, compositeId)) {
@@ -88,7 +95,13 @@ export default class InteractionCreateListener implements ClientEventListener {
         }
 
         const commands = this.marmutClient.commands;
-        const command = commands.get(commandName)!;
+        const command = commands.get(commandName);
+        if (!command) {
+            console.warn(
+                `[InteractionCreate] Received unknown command: "${commandName}". Ignoring.`,
+            );
+            return;
+        }
 
         this.setCooldown(commandName, compositeId);
         this.scheduleCooldownDeletion(commandName, compositeId);

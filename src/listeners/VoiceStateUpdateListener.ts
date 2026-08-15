@@ -39,20 +39,23 @@ export default class VoiceStateUpdateListener implements ClientEventListener {
         if (clientVoiceChannelId !== oldState.channelId) {
             return;
         }
-        const guildVoiceState = guildVoiceStateManager.get(guildId)!;
+        const guildVoiceState = guildVoiceStateManager.get(guildId);
+        if (!guildVoiceState) return;
         this.handleGuildVoiceState(guildVoiceState);
     }
 
     private handleChannelJoin(newState: VoiceState) {
         const clientId = newState.client.user.id;
         const guild = newState.guild;
-        const member = newState.member!;
+        const member = newState.member;
+        if (!member) return;
         if (clientId === newState.id) {
             const guildVoiceState = new GuildVoiceState(guild);
             guildVoiceStateManager.set(guild.id, guildVoiceState);
             this.handleGuildVoiceState(guildVoiceState);
         } else if (clientInSameVoiceChannelAs(member)) {
-            const guildVoiceState = guildVoiceStateManager.get(guild.id)!;
+            const guildVoiceState = guildVoiceStateManager.get(guild.id);
+            if (!guildVoiceState) return;
             this.handleGuildVoiceState(guildVoiceState);
         }
     }
@@ -72,7 +75,8 @@ export default class VoiceStateUpdateListener implements ClientEventListener {
             clientVoiceChannelId === oldState.channelId
         ) {
             const guildId = newState.guild.id;
-            const guildVoiceState = guildVoiceStateManager.get(guildId)!;
+            const guildVoiceState = guildVoiceStateManager.get(guildId);
+            if (!guildVoiceState) return;
             this.handleGuildVoiceState(guildVoiceState);
         }
     }
