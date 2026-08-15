@@ -98,15 +98,37 @@ export default class PlayCommand extends BaseCommand {
         const { guild, member } = getMusicCommandContext(interaction);
 
         if (!clientInSameVoiceChannelAs(member) && !clientIsPlayingIn(guild)) {
-            await joinVoiceChannel(member.voice.channel!);
+            const voiceChannel = member.voice.channel;
+            if (!voiceChannel) {
+                await this.replyWithError(
+                    interaction,
+                    "Unable to resolve your voice channel. Please try again.",
+                );
+                return;
+            }
+            await joinVoiceChannel(voiceChannel);
         }
 
         const player = getGuildMusicPlayer(guild.id);
         const song = this.createSong(trackResult);
         const currentIndex = player.getCurrentIndex();
 
+        const textChannel =
+            interaction.channel ??
+            (await interaction.client.channels
+                .fetch(interaction.channelId)
+                .catch(() => null));
+
+        if (!textChannel || !textChannel.isTextBased()) {
+            await this.replyWithError(
+                interaction,
+                "Unable to resolve the text channel. Please try again.",
+            );
+            return;
+        }
+
         try {
-            await player.play(song, interaction.channel!);
+            await player.play(song, textChannel);
         } catch (err) {
             await this.handleError(interaction, err);
             if (!(err instanceof ValidationError)) {

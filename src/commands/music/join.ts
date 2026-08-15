@@ -43,9 +43,9 @@ export default class JoinCommand extends BaseCommand {
 
         if (channel) {
             const channelId = channel.id;
-            const channelFromCache = guild.channels.cache.get(channelId)!;
+            const channelFromCache = guild.channels.cache.get(channelId);
 
-            if (!channelFromCache.isVoiceBased()) {
+            if (!channelFromCache || !channelFromCache.isVoiceBased()) {
                 throw new ValidationError({
                     code: ValidationErrorCode.INVALID_VOICE_CHANNEL,
                 });
@@ -99,10 +99,10 @@ export default class JoinCommand extends BaseCommand {
         const clientVoiceState = guild.voiceStates.cache.get(clientId);
         const clientVoiceChannelId = clientVoiceState?.channelId;
 
-        const memberVoiceChannel = member.voice.channel!;
-
         const channel = interaction.options.getChannel("channel");
-        const channelId = (channel ?? memberVoiceChannel).id;
+        const channelId = channel?.id ?? member.voice.channelId!;
+        // member.voice.channelId is non-null here: validateArgs() called
+        // inVoiceChannel(member) which checks channelId !== null.
 
         if (clientVoiceChannelId === channelId) {
             await this.replyWithError(
@@ -112,8 +112,16 @@ export default class JoinCommand extends BaseCommand {
             return;
         }
 
-        const voiceChannel = (interaction.options.getChannel("channel") ??
-            member.voice.channel) as VoiceBasedChannel;
+        const voiceChannel =
+            (interaction.options.getChannel("channel") as VoiceBasedChannel | null) ??
+            member.voice.channel;
+        if (!voiceChannel) {
+            await this.replyWithError(
+                interaction,
+                "Unable to resolve the voice channel. Please try again.",
+            );
+            return;
+        }
         await joinVoiceChannel(voiceChannel);
 
         const embed = this.createEmbed(

@@ -95,7 +95,15 @@ export default class SearchCommand extends BaseCommand {
         const { guild, member } = getMusicCommandContext(interaction);
 
         if (!clientInSameVoiceChannelAs(member) && !clientIsPlayingIn(guild)) {
-            await joinVoiceChannel(member.voice.channel!);
+            const voiceChannel = member.voice.channel;
+            if (!voiceChannel) {
+                await this.handleError(
+                    interaction,
+                    new Error("Unable to resolve your voice channel. Please try again."),
+                );
+                return;
+            }
+            await joinVoiceChannel(voiceChannel);
         }
 
         const player = getGuildMusicPlayer(guild.id);
@@ -109,8 +117,22 @@ export default class SearchCommand extends BaseCommand {
                 ? createNowPlayingEmbed(song)
                 : createAddedToQueueEmbed(song);
 
+        const textChannel =
+            interaction.channel ??
+            (await interaction.client.channels
+                .fetch(interaction.channelId)
+                .catch(() => null));
+
+        if (!textChannel || !textChannel.isTextBased()) {
+            await this.handleError(
+                interaction,
+                new Error("Unable to resolve the text channel. Please try again."),
+            );
+            return;
+        }
+
         try {
-            await player.play(song, interaction.channel!);
+            await player.play(song, textChannel);
         } catch (err) {
             await this.handleError(interaction, err);
             if (!(err instanceof ValidationError)) {
@@ -145,7 +167,15 @@ export default class SearchCommand extends BaseCommand {
         const { guild, member } = getMusicCommandContext(interaction);
 
         if (!clientInSameVoiceChannelAs(member) && !clientIsPlayingIn(guild)) {
-            await joinVoiceChannel(member.voice.channel!);
+            const voiceChannel = member.voice.channel;
+            if (!voiceChannel) {
+                await this.replyWithError(
+                    interaction,
+                    "Unable to resolve your voice channel. Please try again.",
+                );
+                return;
+            }
+            await joinVoiceChannel(voiceChannel);
         }
 
         const songs = this.createSongs(tracks);
